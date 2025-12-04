@@ -138,17 +138,8 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    // Parse the results JSON string
-    const results = response.data.data?.search?.results;
-    if (!results) {
-      return res.json({
-        success: true,
-        books: []
-      });
-    }
-
-    // The results come as a JSON string, so we need to parse it
-    const books = JSON.parse(results);
+    // The results are already parsed JSON objects, not a string
+    const books = response.data.data?.search?.results || [];
 
     res.json({
       success: true,
