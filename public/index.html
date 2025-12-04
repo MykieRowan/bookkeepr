@@ -4,8 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liberry</title>
+    <link href="https://fonts.cdnfonts.com/css/cooper-black" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --retro-cream: #f9f3de;
+            --retro-paper: #f5e9c5;
+            --retro-teal: #1b8a8f;
+            --retro-orange: #e36a2e;
+            --retro-olive: #7a8d44;
+            --retro-brown: #3b2b2f;
+        }
+
+        * {
+            font-family: 'Work Sans', 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .liberry-wordmark {
+            font-family: 'Cooper Black', 'Cooper Std', 'Work Sans', sans-serif;
+            letter-spacing: 0.02em;
+        }
+
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -19,50 +39,122 @@
             overflow: hidden;
         }
         body {
-            background: #0f1419;
+            background: radial-gradient(circle at 12% 20%, rgba(227, 106, 46, 0.12) 0, transparent 30%),
+                        radial-gradient(circle at 80% 0%, rgba(27, 138, 143, 0.12) 0, transparent 26%),
+                        var(--retro-cream);
+            color: var(--retro-brown);
+        }
+        .retro-card {
+            background: linear-gradient(180deg, #fffaf1 0%, #f8eecf 100%);
+            border: 1px solid #ddc9a7;
+            box-shadow: 0 10px 0 #d2c19f, 0 14px 18px rgba(0, 0, 0, 0.1);
+        }
+        .retro-stripe {
+            background: repeating-linear-gradient(45deg, rgba(27, 138, 143, 0.2) 0, rgba(27, 138, 143, 0.2) 10px,
+            rgba(227, 106, 46, 0.25) 10px, rgba(227, 106, 46, 0.25) 20px);
+        }
+        .search-shell {
+            background: var(--retro-paper);
+            border: 2px solid #d3c19a;
+            box-shadow: 0 6px 0 #c6b589;
+        }
+        .search-input::placeholder {
+            color: #9a8760;
+        }
+        .request-overlay {
+            background-color: rgba(59, 43, 47, 0);
+        }
+        .request-btn {
+            background: var(--retro-orange) !important;
+            color: #fff7ed !important;
+            border: 2px solid #c7521f;
+            box-shadow: 0 4px 0 #b24314;
+            opacity: 0;
+        }
+        .request-btn:hover {
+            transform: translateY(1px);
+            box-shadow: 0 2px 0 #b24314;
         }
         .show-mobile {
-            background-color: rgba(0, 0, 0, 0.6) !important;
+            background-color: rgba(59, 43, 47, 0.35) !important;
+        }
+        @media (min-width: 768px) {
+            .group:hover .request-overlay {
+                background-color: rgba(59, 43, 47, 0.45);
+            }
+            .group:hover .request-btn {
+                opacity: 1;
+            }
         }
     </style>
 </head>
-<body class="bg-[#0f1419] text-white min-h-screen">
+<body class="min-h-screen">
     <div id="app" class="p-6">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="mb-8">
-                <div class="flex items-center gap-3 mb-6">
-                    <svg class="w-10 h-10 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    <h1 class="text-3xl font-bold">Liberry</h1>
+            <div class="mb-10">
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="relative flex items-center justify-center w-14 h-14 rounded-full retro-card">
+                        <svg class="w-11 h-11 text-[--retro-brown]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="60" cy="60" r="56" fill="#f5e1b8" stroke="#3b2b2f" stroke-width="6" />
+                            <path d="M44 52c0-10 7.5-18 17-18s17 8 17 18" stroke="#3b2b2f" stroke-width="6" stroke-linecap="round" />
+                            <ellipse cx="47" cy="55" rx="6" ry="8" fill="#1b8a8f" stroke="#3b2b2f" stroke-width="5" />
+                            <ellipse cx="73" cy="55" rx="6" ry="8" fill="#1b8a8f" stroke="#3b2b2f" stroke-width="5" />
+                            <path d="M46 55h28" stroke="#fef7e8" stroke-width="5" stroke-linecap="round" />
+                            <path d="M52 74c4 4 12 4 16 0" stroke="#3b2b2f" stroke-width="5" stroke-linecap="round" />
+                            <rect x="30" y="68" width="60" height="24" rx="8" fill="#e36a2e" stroke="#3b2b2f" stroke-width="6" />
+                            <path d="M38 72h12M38 80h10" stroke="#fef7e8" stroke-width="5" stroke-linecap="round" />
+                            <path d="M84 74l4 12" stroke="#fef7e8" stroke-width="5" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="inline-flex items-center gap-3 px-5 py-3 retro-card rounded-full">
+                            <h1 class="text-4xl lowercase liberry-wordmark text-[--retro-brown]">liberry</h1>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--retro-teal); color: #fff7ed;">reading drive</span>
+                        </div>
+                        <p class="mt-3 text-[--retro-brown] text-sm sm:text-base font-medium">Stamp a request, check out a title, and join the retro reading squad.</p>
+                    </div>
                 </div>
+                <div class="flex items-center gap-3 text-xs uppercase tracking-[0.1em] font-semibold text-[--retro-brown]">
+                    <span class="px-3 py-1 rounded-full retro-stripe">book cart patrol</span>
+                    <span class="px-3 py-1 rounded-full" style="background: #fff7ed; border: 1px solid #d5c29f;">always on the shelf</span>
+                </div>
+            </div>
 
             <!-- Search Bar -->
             <div class="mb-8">
-                <div class="relative">
-                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="relative rounded-2xl search-shell">
+                    <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-[--retro-brown]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
+                    <div class="absolute right-4 top-2.5 px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--retro-orange); color: #fff7ed; border: 2px solid #c7521f; box-shadow: 0 4px 0 #b24314;">file your find</div>
                     <input type="text" id="searchInput" placeholder="Search for a book title or author..."
-                           class="w-full pl-12 pr-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg focus:outline-none focus:border-indigo-500 text-white placeholder-gray-400"
+                           class="search-input w-full pl-14 pr-28 py-4 bg-transparent rounded-2xl focus:outline-none text-lg text-[--retro-brown]"
                            oninput="handleSearchInput()"
                            onkeypress="if(event.key==='Enter') searchBooks()">
                 </div>
             </div>
 
             <!-- Status Message -->
-            <div id="statusMsg" class="hidden mb-6 p-4 bg-[#1a1f2e] border border-gray-700 rounded-lg text-center text-gray-300"></div>
+            <div id="statusMsg" class="hidden mb-6 p-4 retro-card rounded-xl text-center text-[--retro-brown]"></div>
 
             <!-- Search Results -->
             <div id="results"></div>
 
             <!-- Empty State -->
-            <div id="emptyState" class="text-center py-16 text-gray-400">
-                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <p class="text-lg">Search for a book to get started</p>
+            <div id="emptyState" class="text-center py-16 text-[--retro-brown]">
+                <div class="mx-auto w-24 h-24 mb-4 retro-card rounded-full flex items-center justify-center">
+                    <svg class="w-14 h-14" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="16" y="22" width="68" height="56" rx="10" fill="#fff7ed" stroke="#3b2b2f" stroke-width="5" />
+                        <path d="M26 36h48" stroke="#e36a2e" stroke-width="5" stroke-linecap="round" />
+                        <path d="M30 46h40" stroke="#1b8a8f" stroke-width="5" stroke-linecap="round" />
+                        <path d="M26 56h48" stroke="#7a8d44" stroke-width="5" stroke-linecap="round" />
+                        <circle cx="38" cy="70" r="4" fill="#3b2b2f" />
+                        <circle cx="62" cy="70" r="4" fill="#3b2b2f" />
+                    </svg>
+                </div>
+                <p class="text-lg font-semibold">Search the stacks to get started</p>
+                <p class="text-sm text-[--retro-brown] opacity-80">Enter an author or title to check out a new read.</p>
             </div>
         </div>
     </div>
@@ -73,114 +165,118 @@
             status.textContent = msg;
             status.classList.remove('hidden');
         }
-        
+
         function hideStatus() {
             document.getElementById('statusMsg').classList.add('hidden');
         }
-        
+
         let searchTimeout;
-        
+
         function handleSearchInput() {
             clearTimeout(searchTimeout);
             const query = document.getElementById('searchInput').value.trim();
-            
+
             if (!query) {
                 document.getElementById('results').innerHTML = '';
                 document.getElementById('emptyState').classList.remove('hidden');
                 hideStatus();
                 return;
             }
-            
+
             // Debounce search - wait 500ms after user stops typing
             searchTimeout = setTimeout(() => searchBooks(), 500);
         }
-        
+
         async function searchBooks() {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
-            
-            showStatus('Searching Hardcover...');
+
+            showStatus('Searching the stacks...');
             document.getElementById('emptyState').classList.add('hidden');
-            
+
             try {
                 const response = await fetch('/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (!data.success) {
                     showStatus('Error: ' + data.error);
                     document.getElementById('results').innerHTML = '';
                     return;
                 }
-                
+
                 const books = data.books;
-                
+
                 if (books.length === 0) {
                     showStatus('No books found');
                     document.getElementById('results').innerHTML = '';
                     return;
                 }
-                
+
                 hideStatus();
                 displayResults(books);
-                
+
             } catch (error) {
                 console.error('Search error:', error);
                 showStatus('Error connecting to server');
             }
         }
-        
+
         function displayResults(books) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = `
-                <h2 class="text-xl font-semibold mb-4">Search Results</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+                <div class="flex items-center gap-3 mb-4">
+                    <h2 class="text-xl font-semibold text-[--retro-brown]">Search results</h2>
+                    <span class="text-xs uppercase tracking-[0.2em] px-2 py-1 rounded" style="background: #fff7ed; border: 1px solid #d5c29f;">stamp to request</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-5">
                     ${books.map((book, index) => `
                         <div class="group cursor-pointer" data-book-index="${index}">
-                            <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card" onclick="toggleRequestButton(event, ${index})">
+                            <div class="relative aspect-[2/3] rounded-[18px] overflow-hidden retro-card mb-3 book-card" onclick="toggleRequestButton(event, ${index})">
                                 ${book.image && book.image.url ? `
                                     <img src="${book.image.url}" alt="${book.title}" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-black bg-opacity-0 md:group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center request-overlay" data-card-index="${index}">
-                                        <button onclick='requestBook(event, ${index})' 
-                                                class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2 text-sm request-btn">
+                                    <div class="absolute inset-0 request-overlay transition-all duration-200 flex items-center justify-center" data-card-index="${index}">
+                                        <button onclick='requestBook(event, ${index})'
+                                                class="request-btn transition-opacity duration-200 px-4 py-2 rounded-full font-semibold flex items-center gap-2 text-sm">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4" />
                                             </svg>
-                                            Request
+                                            stamp request
                                         </button>
                                     </div>
                                 ` : `
-                                    <div class="w-full h-full flex items-center justify-center text-gray-600">
+                                    <div class="w-full h-full flex items-center justify-center text-[--retro-brown] bg-[--retro-paper]">
                                         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                         </svg>
                                     </div>
                                 `}
+                                <div class="absolute bottom-0 left-0 right-0 h-10 retro-stripe flex items-center px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[--retro-brown]">liberry stacks</div>
                             </div>
-                            <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
-                            <p class="text-xs text-gray-400 line-clamp-1">
+                            <h3 class="font-semibold text-sm line-clamp-2 mb-1 text-[--retro-brown]">${book.title}</h3>
+                            <p class="text-xs text-[--retro-brown] opacity-80 line-clamp-1">
                                 ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
                             </p>
-                            ${book.release_year ? `<p class="text-xs text-gray-500">${book.release_year}</p>` : ''}
+                            ${book.release_year ? `<p class="text-xs text-[--retro-brown] opacity-70">${book.release_year}</p>` : ''}
                         </div>
                     `).join('')}
                 </div>
             `;
-            
+
             // Store books in a global variable for access by requestBook
             window.currentBooks = books;
         }
-        
+
         function toggleRequestButton(event, index) {
             // Only handle on mobile/tablet (not on desktop hover)
             if (window.innerWidth >= 768) return; // md breakpoint
-            
+
             event.stopPropagation();
-            
+
             // Close all other open overlays
             document.querySelectorAll('.request-overlay').forEach(overlay => {
                 if (overlay.dataset.cardIndex !== index.toString()) {
@@ -188,11 +284,11 @@
                     overlay.querySelector('.request-btn').classList.remove('opacity-100');
                 }
             });
-            
+
             // Toggle this overlay
             const overlay = event.currentTarget.querySelector('.request-overlay');
             const btn = overlay.querySelector('.request-btn');
-            
+
             if (overlay.classList.contains('show-mobile')) {
                 overlay.classList.remove('show-mobile');
                 btn.classList.remove('opacity-100');
@@ -201,40 +297,40 @@
                 btn.classList.add('opacity-100');
             }
         }
-        
+
         function requestBook(event, index) {
             event.stopPropagation();
             const book = window.currentBooks[index];
             downloadBook(book);
         }
-        
+
         async function downloadBook(book) {
             console.log('Requesting book:', book); // Debug log
             showStatus('Sending to Prowlarr...');
-            
+
             try {
-                const author = book.author_names && book.author_names[0] ? 
-                    book.author_names[0] : 
-                    (book.contributions && book.contributions[0] && book.contributions[0].author ? 
+                const author = book.author_names && book.author_names[0] ?
+                    book.author_names[0] :
+                    (book.contributions && book.contributions[0] && book.contributions[0].author ?
                         book.contributions[0].author.name : 'Unknown');
-                
+
                 const payload = {
                     title: book.title,
                     author: author,
                     isbn: book.isbn_13 || book.isbn_10,
                     year: book.release_year
                 };
-                
+
                 console.log('Sending payload:', payload); // Debug log
-                
+
                 const response = await fetch('/api/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showStatus('✓ Book requested! Download should start shortly.');
                 } else {
