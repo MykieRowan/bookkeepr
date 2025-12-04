@@ -113,17 +113,18 @@ app.post('/api/search', async (req, res) => {
       'https://api.hardcover.app/v1/graphql',
       {
         query: `
-          query SearchBooks($query: String!) {
-            books(where: {title: {_ilike: $query}}, limit: 20) {
+          query SearchBooks($search: String!) {
+            search_books(query: $search) {
               id
               title
+              subtitle
               description
               image
               release_year
               pages
               isbn_10
               isbn_13
-              contributions(where: {author: {}}) {
+              contributions {
                 author {
                   name
                 }
@@ -131,7 +132,7 @@ app.post('/api/search', async (req, res) => {
             }
           }
         `,
-        variables: { query: `%${query}%` }
+        variables: { search: query }
       },
       {
         headers: {
