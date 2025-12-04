@@ -98,7 +98,7 @@ async function downloadFromProwlarr(indexerId, guid) {
 // Proxy Hardcover search through backend
 app.post('/api/search', async (req, res) => {
   try {
-    const { query } = req.body;
+    const { query, searchType = 'title' } = req.body;
 
     if (!query) {
       return res.status(400).json({ 
@@ -107,7 +107,46 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    console.log(`Searching Hardcover for: ${query}`);
+    console.log(`Searching Hardcover for: ${query} (type: ${searchType})`);
+
+    // Build GraphQL query based on search type
+    let graphqlQuery;
+    let variables;
+
+    if (searchType === 'isbn') {
+      graphqlQuery = `
+        query SearchByISBN($isbn: String!) {
+          books(where: {_or: [{isbn_10: {_eq: $isbn}}, {isbn_13: {_eq: $isbn}}]}, limit: 20) {
+            id
+            title
+            description
+            image
+            release_year
+            pages
+            isbn_10
+            isbn_13
+            rating
+            slug
+            contributions {
+              author {
+                name
+              }
+            }
+          }
+        }
+      `;
+      variables = { isbn: query };
+    } else {
+      // Use search API for title and author
+      graphqlQuery = `
+        query SearchBooks($query: String!) {
+          search(query: $query, query_type: "Book", per_page: 20) {
+            results
+          }
+        }
+      `;
+      variables = { query: query };
+    }
 
     const response = await axios.post(
       'https://api.hardcover.app/v1/graphql',
