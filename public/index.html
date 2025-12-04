@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookKeepr</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-screen">
+    <div id="app" class="p-6">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="flex items-center justify-center gap-3 mb-3">
+                    <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <h1 class="text-4xl font-bold">BookKeepr</h1>
+                </div>
+                <p class="text-slate-400">Search → Prowlarr → qBitTorrent → Calibre</p>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mb-8">
+                <div class="flex gap-3">
+                    <div class="flex-1 relative">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="Search for a book title or author..."
+                               class="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 text-white placeholder-slate-400"
+                               onkeypress="if(event.key==='Enter') searchBooks()">
+                    </div>
+                    <button onclick="searchBooks()" id="searchBtn"
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Message -->
+            <div id="statusMsg" class="hidden mb-6 p-4 bg-slate-800 border border-slate-700 rounded-lg text-center"></div>
+
+            <!-- Search Results -->
+            <div id="results"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-16 text-slate-400">
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <p class="text-lg">Search for a book to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showStatus(msg) {
+            const status = document.getElementById('statusMsg');
+            status.textContent = msg;
+            status.classList.remove('hidden');
+        }
+        
+        function hideStatus() {
+            document.getElementById('statusMsg').classList.add('hidden');
+        }
+        
+        async function searchBooks() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+            
+            const btn = document.getElementById('searchBtn');
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Searching...
+            `;
+            
+            showStatus('Searching Hardcover...');
+            document.getElementById('emptyState').classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showStatus('Error: ' + data.error);
+                    document.getElementById('results').innerHTML = '';
+                    return;
+                }
+                
+                const books = data.books;
+                
+                if (books.length === 0) {
+                    showStatus('No books found');
+                    document.getElementById('results').innerHTML = '';
+                    return;
+                }
+                
+                showStatus(`Found ${books.length} books`);
+                displayResults(books);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                showStatus('Error connecting to server');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Search
+                `;
+            }
+        }
+        
+        function displayResults(books) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2 class="text-2xl font-semibold mb-4">Search Results</h2>
+                <div class="space-y-4">
+                    ${books.map(book => `
+                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-colors">
+                            <div class="flex gap-4">
+                                ${book.image ? `
+                                    <img src="${book.image}" alt="${book.title}" class="w-24 h-32 object-cover rounded">
+                                ` : ''}
+                                
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-semibold mb-1">${book.title}</h3>
+                                    <p class="text-slate-400 mb-2">
+                                        ${book.contributions?.[0]?.author?.name || 'Unknown Author'}
+                                        ${book.release_year ? ` • ${book.release_year}` : ''}
+                                    </p>
+                                    
+                                    ${book.description ? `
+                                        <p class="text-slate-300 text-sm mb-3 line-clamp-2">${book.description}</p>
+                                    ` : ''}
+                                    
+                                    <div class="flex items-center gap-3 text-sm text-slate-400">
+                                        ${book.isbn_13 ? `<span>ISBN: ${book.isbn_13}</span>` : ''}
+                                        ${book.pages ? `<span>• ${book.pages} pages</span>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center">
+                                    <button onclick='downloadBook(${JSON.stringify(book)})' 
+                                            class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function downloadBook(book) {
+            showStatus('Sending to Prowlarr...');
+            
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: book.title,
+                        author: book.contributions?.[0]?.author?.name || 'Unknown',
+                        isbn: book.isbn_13 || book.isbn_10,
+                        year: book.release_year
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('✓ Sent to Prowlarr! Download should start shortly.');
+                } else {
+                    showStatus('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus('Error connecting to server');
+            }
+        }
+    </script>
+</body>
+</html>
