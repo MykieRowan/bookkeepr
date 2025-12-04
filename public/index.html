@@ -9,13 +9,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --club-cream: #f8f2e6;
-            --club-paper: #f3e7cf;
-            --club-toast: #e8cfae;
-            --club-pink: #f1b6bc;
-            --club-bacon: #d9726b;
-            --club-yolk: #f4a335;
-            --club-ink: #2d1f18;
+            --retro-cream: #f9f3de;
+            --retro-paper: #f5e9c5;
+            --retro-teal: #1b8a8f;
+            --retro-orange: #e36a2e;
+            --retro-olive: #7a8d44;
+            --retro-brown: #3b2b2f;
         }
 
         * {
@@ -40,51 +39,48 @@
             overflow: hidden;
         }
         body {
-            background: radial-gradient(circle at 20% 18%, rgba(241, 182, 188, 0.12) 0, transparent 32%),
-                        radial-gradient(circle at 80% 0%, rgba(248, 203, 152, 0.14) 0, transparent 30%),
-                        var(--club-cream);
-            color: var(--club-ink);
+            background: radial-gradient(circle at 12% 20%, rgba(227, 106, 46, 0.12) 0, transparent 30%),
+                        radial-gradient(circle at 80% 0%, rgba(27, 138, 143, 0.12) 0, transparent 26%),
+                        var(--retro-cream);
+            color: var(--retro-brown);
         }
         .retro-card {
-            background: linear-gradient(180deg, #fffaf5 0%, #f5e6cf 100%);
-            border: 1px solid #e3d2b0;
-            box-shadow: 0 6px 14px rgba(45, 31, 24, 0.12);
+            background: linear-gradient(180deg, #fffaf1 0%, #f8eecf 100%);
+            border: 1px solid #ddc9a7;
+            box-shadow: 0 10px 0 #d2c19f, 0 14px 18px rgba(0, 0, 0, 0.1);
         }
         .retro-stripe {
-            background: repeating-linear-gradient(45deg,
-                rgba(217, 114, 107, 0.18) 0,
-                rgba(217, 114, 107, 0.18) 12px,
-                rgba(248, 203, 152, 0.22) 12px,
-                rgba(248, 203, 152, 0.22) 24px);
+            background: repeating-linear-gradient(45deg, rgba(27, 138, 143, 0.2) 0, rgba(27, 138, 143, 0.2) 10px,
+            rgba(227, 106, 46, 0.25) 10px, rgba(227, 106, 46, 0.25) 20px);
         }
         .search-shell {
-            background: var(--club-paper);
-            border: 2px solid #e0cba9;
-            box-shadow: 0 6px 0 #d4bb92;
+            background: var(--retro-paper);
+            border: 2px solid #d3c19a;
+            box-shadow: 0 6px 0 #c6b589;
         }
         .search-input::placeholder {
-            color: #a28963;
+            color: #9a8760;
         }
         .request-overlay {
-            background-color: rgba(45, 31, 24, 0);
+            background-color: rgba(59, 43, 47, 0);
         }
         .request-btn {
-            background: var(--club-pink) !important;
-            color: #2d1f18 !important;
-            border: 2px solid #cc7f85;
-            box-shadow: 0 4px 0 #b7656a;
+            background: var(--retro-orange) !important;
+            color: #fff7ed !important;
+            border: 2px solid #c7521f;
+            box-shadow: 0 4px 0 #b24314;
             opacity: 0;
         }
         .request-btn:hover {
             transform: translateY(1px);
-            box-shadow: 0 2px 0 #b7656a;
+            box-shadow: 0 2px 0 #b24314;
         }
         .show-mobile {
-            background-color: rgba(45, 31, 24, 0.32) !important;
+            background-color: rgba(59, 43, 47, 0.35) !important;
         }
         @media (min-width: 768px) {
             .group:hover .request-overlay {
-                background-color: rgba(45, 31, 24, 0.4);
+                background-color: rgba(59, 43, 47, 0.45);
             }
             .group:hover .request-btn {
                 opacity: 1;
@@ -99,66 +95,66 @@
             <div class="mb-10">
                 <div class="flex items-start gap-4 mb-4">
                     <div class="relative flex items-center justify-center w-14 h-14 rounded-full retro-card">
-                        <svg class="w-11 h-11 text-[--club-ink]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="60" cy="60" r="56" fill="#f3e7cf" stroke="#2d1f18" stroke-width="6" />
-                            <path d="M44 52c0-10 7.5-18 17-18s17 8 17 18" stroke="#2d1f18" stroke-width="6" stroke-linecap="round" />
-                            <ellipse cx="47" cy="55" rx="6" ry="8" fill="#f1b6bc" stroke="#2d1f18" stroke-width="5" />
-                            <ellipse cx="73" cy="55" rx="6" ry="8" fill="#f1b6bc" stroke="#2d1f18" stroke-width="5" />
-                            <path d="M46 55h28" stroke="#fff8ed" stroke-width="5" stroke-linecap="round" />
-                            <path d="M52 74c4 4 12 4 16 0" stroke="#2d1f18" stroke-width="5" stroke-linecap="round" />
-                            <rect x="30" y="68" width="60" height="24" rx="8" fill="#f4a335" stroke="#2d1f18" stroke-width="6" />
-                            <path d="M38 72h12M38 80h10" stroke="#fff8ed" stroke-width="5" stroke-linecap="round" />
-                            <path d="M84 74l4 12" stroke="#fff8ed" stroke-width="5" stroke-linecap="round" />
+                        <svg class="w-11 h-11 text-[--retro-brown]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="60" cy="60" r="56" fill="#f5e1b8" stroke="#3b2b2f" stroke-width="6" />
+                            <path d="M44 52c0-10 7.5-18 17-18s17 8 17 18" stroke="#3b2b2f" stroke-width="6" stroke-linecap="round" />
+                            <ellipse cx="47" cy="55" rx="6" ry="8" fill="#1b8a8f" stroke="#3b2b2f" stroke-width="5" />
+                            <ellipse cx="73" cy="55" rx="6" ry="8" fill="#1b8a8f" stroke="#3b2b2f" stroke-width="5" />
+                            <path d="M46 55h28" stroke="#fef7e8" stroke-width="5" stroke-linecap="round" />
+                            <path d="M52 74c4 4 12 4 16 0" stroke="#3b2b2f" stroke-width="5" stroke-linecap="round" />
+                            <rect x="30" y="68" width="60" height="24" rx="8" fill="#e36a2e" stroke="#3b2b2f" stroke-width="6" />
+                            <path d="M38 72h12M38 80h10" stroke="#fef7e8" stroke-width="5" stroke-linecap="round" />
+                            <path d="M84 74l4 12" stroke="#fef7e8" stroke-width="5" stroke-linecap="round" />
                         </svg>
                     </div>
                     <div>
                         <div class="inline-flex items-center gap-3 px-5 py-3 retro-card rounded-full">
-                            <h1 class="text-4xl lowercase liberry-wordmark text-[--club-ink]">liberry</h1>
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--club-yolk); color: #2d1f18; border: 1px solid #d28c2f;">weekend club</span>
+                            <h1 class="text-4xl lowercase liberry-wordmark text-[--retro-brown]">liberry</h1>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--retro-teal); color: #fff7ed;">reading drive</span>
                         </div>
-                        <p class="mt-3 text-[--club-ink] text-sm sm:text-base font-medium">Pull up a chair, pour a cup, and file your weekend reads.</p>
+                        <p class="mt-3 text-[--retro-brown] text-sm sm:text-base font-medium">Stamp a request, check out a title, and join the retro reading squad.</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-3 text-xs uppercase tracking-[0.1em] font-semibold text-[--club-ink]">
-                    <span class="px-3 py-1 rounded-full retro-stripe">breakfast stack</span>
-                    <span class="px-3 py-1 rounded-full" style="background: #fff8ed; border: 1px solid #e3d2b0;">always on the shelf</span>
+                <div class="flex items-center gap-3 text-xs uppercase tracking-[0.1em] font-semibold text-[--retro-brown]">
+                    <span class="px-3 py-1 rounded-full retro-stripe">book cart patrol</span>
+                    <span class="px-3 py-1 rounded-full" style="background: #fff7ed; border: 1px solid #d5c29f;">always on the shelf</span>
                 </div>
             </div>
 
             <!-- Search Bar -->
             <div class="mb-8">
                 <div class="relative rounded-2xl search-shell">
-                    <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-[--club-ink]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-[--retro-brown]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <div class="absolute right-4 top-2.5 px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--club-pink); color: #2d1f18; border: 2px solid #cc7f85; box-shadow: 0 4px 0 #b7656a;">file your find</div>
+                    <div class="absolute right-4 top-2.5 px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--retro-orange); color: #fff7ed; border: 2px solid #c7521f; box-shadow: 0 4px 0 #b24314;">file your find</div>
                     <input type="text" id="searchInput" placeholder="Search for a book title or author..."
-                           class="search-input w-full pl-14 pr-28 py-4 bg-transparent rounded-2xl focus:outline-none text-lg text-[--club-ink]"
+                           class="search-input w-full pl-14 pr-28 py-4 bg-transparent rounded-2xl focus:outline-none text-lg text-[--retro-brown]"
                            oninput="handleSearchInput()"
                            onkeypress="if(event.key==='Enter') searchBooks()">
                 </div>
             </div>
 
             <!-- Status Message -->
-            <div id="statusMsg" class="hidden mb-6 p-4 retro-card rounded-xl text-center text-[--club-ink]"></div>
+            <div id="statusMsg" class="hidden mb-6 p-4 retro-card rounded-xl text-center text-[--retro-brown]"></div>
 
             <!-- Search Results -->
             <div id="results"></div>
 
             <!-- Empty State -->
-            <div id="emptyState" class="text-center py-16 text-[--club-ink]">
+            <div id="emptyState" class="text-center py-16 text-[--retro-brown]">
                 <div class="mx-auto w-24 h-24 mb-4 retro-card rounded-full flex items-center justify-center">
                     <svg class="w-14 h-14" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="16" y="22" width="68" height="56" rx="10" fill="#fff8ed" stroke="#2d1f18" stroke-width="5" />
-                        <path d="M26 36h48" stroke="#f4a335" stroke-width="5" stroke-linecap="round" />
-                        <path d="M30 46h40" stroke="#f1b6bc" stroke-width="5" stroke-linecap="round" />
-                        <path d="M26 56h48" stroke="#e8cfae" stroke-width="5" stroke-linecap="round" />
-                        <circle cx="38" cy="70" r="4" fill="#2d1f18" />
-                        <circle cx="62" cy="70" r="4" fill="#2d1f18" />
+                        <rect x="16" y="22" width="68" height="56" rx="10" fill="#fff7ed" stroke="#3b2b2f" stroke-width="5" />
+                        <path d="M26 36h48" stroke="#e36a2e" stroke-width="5" stroke-linecap="round" />
+                        <path d="M30 46h40" stroke="#1b8a8f" stroke-width="5" stroke-linecap="round" />
+                        <path d="M26 56h48" stroke="#7a8d44" stroke-width="5" stroke-linecap="round" />
+                        <circle cx="38" cy="70" r="4" fill="#3b2b2f" />
+                        <circle cx="62" cy="70" r="4" fill="#3b2b2f" />
                     </svg>
                 </div>
                 <p class="text-lg font-semibold">Search the stacks to get started</p>
-                <p class="text-sm text-[--club-ink] opacity-80">Enter an author or title to check out a new read.</p>
+                <p class="text-sm text-[--retro-brown] opacity-80">Enter an author or title to check out a new read.</p>
             </div>
         </div>
     </div>
@@ -234,8 +230,8 @@
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = `
                 <div class="flex items-center gap-3 mb-4">
-                    <h2 class="text-xl font-semibold text-[--club-ink]">Search results</h2>
-                    <span class="text-xs uppercase tracking-[0.2em] px-2 py-1 rounded" style="background: #fff8ed; border: 1px solid #e3d2b0;">stamp to request</span>
+                    <h2 class="text-xl font-semibold text-[--retro-brown]">Search results</h2>
+                    <span class="text-xs uppercase tracking-[0.2em] px-2 py-1 rounded" style="background: #fff7ed; border: 1px solid #d5c29f;">stamp to request</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-5">
                     ${books.map((book, index) => `
@@ -253,19 +249,19 @@
                                         </button>
                                     </div>
                                 ` : `
-                                    <div class="w-full h-full flex items-center justify-center text-[--club-ink] bg-[--club-paper]">
+                                    <div class="w-full h-full flex items-center justify-center text-[--retro-brown] bg-[--retro-paper]">
                                         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                         </svg>
                                     </div>
                                 `}
-                                <div class="absolute bottom-0 left-0 right-0 h-10 retro-stripe flex items-center px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[--club-ink]">liberry stacks</div>
+                                <div class="absolute bottom-0 left-0 right-0 h-10 retro-stripe flex items-center px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[--retro-brown]">liberry stacks</div>
                             </div>
-                            <h3 class="font-semibold text-sm line-clamp-2 mb-1 text-[--club-ink]">${book.title}</h3>
-                            <p class="text-xs text-[--club-ink] opacity-80 line-clamp-1">
+                            <h3 class="font-semibold text-sm line-clamp-2 mb-1 text-[--retro-brown]">${book.title}</h3>
+                            <p class="text-xs text-[--retro-brown] opacity-80 line-clamp-1">
                                 ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
                             </p>
-                            ${book.release_year ? `<p class="text-xs text-[--club-ink] opacity-70">${book.release_year}</p>` : ''}
+                            ${book.release_year ? `<p class="text-xs text-[--retro-brown] opacity-70">${book.release_year}</p>` : ''}
                         </div>
                     `).join('')}
                 </div>
