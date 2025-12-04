@@ -113,34 +113,7 @@ async function downloadFromProwlarr(indexerId, guid) {
     throw error;
   }
 }
-// Hardcover GraphQL query constant (Updated to fetch all required fields)
-const HARDCOVER_SEARCH_QUERY = `
-  query SearchBooks($query: String!) {
-    search(query: $query, query_type: "Book", per_page: 20) {
-      results {
-        hits {
-          document {
-            id
-            title
-            description
-            image
-            release_year
-            pages
-            isbns
-            contributions {
-              author {
-                name
-              }
-            }
-            author_names
-            average_rating
-            url
-          }
-        }
-      }
-    }
-  }
-`;// Map Hardcover hit to book object (Updated mapping)
+// Map Hardcover hit to book object (Updated mapping)
 function mapHardcoverHit(hit) {
   // The hit object contains a document property with all the book data
   return {
@@ -181,7 +154,13 @@ app.post('/api/search', async (req, res) => {
     const response = await axios.post(
       'https://api.hardcover.app/v1/graphql',
       {
-        query: HARDCOVER_SEARCH_QUERY,
+        query: `
+          query SearchBooks($query: String!) {
+            search(query: $query, query_type: "Book", per_page: 20) {
+              results
+            }
+          }
+        `,
         variables: { query: query }
       },
       {
