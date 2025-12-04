@@ -1,75 +1,92 @@
-        // DOM element cache for better performance
-        const DOM = {
-            searchInput: null,
-            statusMsg: null,
-            results: null,
-            emptyState: null,
-            modal: null,
-            modalImage: null,
-            modalTitle: null,
-            modalAuthor: null,
-            modalYear: null,
-            modalIsbn: null,
-            modalRating: null,
-            modalDescription: null,
-            modalHardcoverLink: null,
-            modalRequestBtn: null,
-            
-            init() {
-                this.searchInput = document.getElementById('searchInput');
-                this.statusMsg = document.getElementById('statusMsg');
-                this.results = document.getElementById('results');
-                this.emptyState = document.getElementById('emptyState');
-                this.modal = document.getElementById('moreInfoModal');
-                this.modalImage = document.getElementById('modal-image');
-                this.modalTitle = document.getElementById('modal-title');
-                this.modalAuthor = document.getElementById('modal-author');
-                this.modalYear = document.getElementById('modal-year');
-                this.modalIsbn = document.getElementById('modal-isbn');
-                this.modalRating = document.getElementById('modal-rating');
-                this.modalDescription = document.getElementById('modal-description');
-                this.modalHardcoverLink = document.getElementById('modal-hardcover-link');
-                this.modalRequestBtn = document.getElementById('modal-request-btn');
-            }
-        };
-
-        // Initialize DOM cache on page load
-        document.addEventListener('DOMContentLoaded', () => DOM.init());
-
-        // State management
-        let currentBooks = [];
-        let searchTimeout;
-
-        // Helper function to extract author name from book object
-        function getAuthorName(book) {
-            if (book.author_names && book.author_names[0]) {
-                return book.author_names[0];
-            }
-            if (book.contributions && book.contributions[0]?.author?.name) {
-                return book.contributions[0].author.name;
-            }
-            return 'Unknown Author';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liberry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        body {
+            background: #0f1419;
+        }
+        .show-mobile {
+            background-color: rgba(0, 0, 0, 0.6) !important;
+        }
+    </style>
+</head>
+<body class="bg-[#0f1419] text-white min-h-screen">
+    <div id="app" class="p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <svg class="w-10 h-10 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <h1 class="text-3xl font-bold">Liberry</h1>
+                </div>
 
-        // Helper function to show status message
+            <!-- Search Bar -->
+            <div class="mb-8">
+                <div class="relative">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search for a book title or author..."
+                           class="w-full pl-12 pr-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg focus:outline-none focus:border-indigo-500 text-white placeholder-gray-400"
+                           oninput="handleSearchInput()"
+                           onkeypress="if(event.key==='Enter') searchBooks()">
+                </div>
+            </div>
+
+            <!-- Status Message -->
+            <div id="statusMsg" class="hidden mb-6 p-4 bg-[#1a1f2e] border border-gray-700 rounded-lg text-center text-gray-300"></div>
+
+            <!-- Search Results -->
+            <div id="results"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-16 text-gray-400">
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <p class="text-lg">Search for a book to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
         function showStatus(msg) {
-            DOM.statusMsg.textContent = msg;
-            DOM.statusMsg.classList.remove('hidden');
+            const status = document.getElementById('statusMsg');
+            status.textContent = msg;
+            status.classList.remove('hidden');
         }
-
-        // Helper function to hide status message
+        
         function hideStatus() {
-            DOM.statusMsg.classList.add('hidden');
+            document.getElementById('statusMsg').classList.add('hidden');
         }
-
-        // Handle search input with debouncing
+        
+        let searchTimeout;
+        
         function handleSearchInput() {
             clearTimeout(searchTimeout);
-            const query = DOM.searchInput.value.trim();
+            const query = document.getElementById('searchInput').value.trim();
             
             if (!query) {
-                DOM.results.innerHTML = '';
-                DOM.emptyState.classList.remove('hidden');
+                document.getElementById('results').innerHTML = '';
+                document.getElementById('emptyState').classList.remove('hidden');
                 hideStatus();
                 return;
             }
@@ -77,14 +94,13 @@
             // Debounce search - wait 500ms after user stops typing
             searchTimeout = setTimeout(() => searchBooks(), 500);
         }
-
-        // Search for books
+        
         async function searchBooks() {
-            const query = DOM.searchInput.value.trim();
+            const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
             
             showStatus('Searching Hardcover...');
-            DOM.emptyState.classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
             
             try {
                 const response = await fetch('/api/search', {
@@ -97,7 +113,7 @@
                 
                 if (!data.success) {
                     showStatus('Error: ' + data.error);
-                    DOM.results.innerHTML = '';
+                    document.getElementById('results').innerHTML = '';
                     return;
                 }
                 
@@ -105,12 +121,11 @@
                 
                 if (books.length === 0) {
                     showStatus('No books found');
-                    DOM.results.innerHTML = '';
+                    document.getElementById('results').innerHTML = '';
                     return;
                 }
                 
                 hideStatus();
-                currentBooks = books;
                 displayResults(books);
                 
             } catch (error) {
@@ -118,107 +133,99 @@
                 showStatus('Error connecting to server');
             }
         }
-
-        // Display search results
+        
         function displayResults(books) {
-            DOM.results.innerHTML = `
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
                 <h2 class="text-xl font-semibold mb-4">Search Results</h2>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
-                    ${books.map((book, index) => createBookCard(book, index)).join('')}
+                    ${books.map((book, index) => `
+                        <div class="group cursor-pointer" data-book-index="${index}">
+                            <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card" onclick="toggleRequestButton(event, ${index})">
+                                ${book.image && book.image.url ? `
+                                    <img src="${book.image.url}" alt="${book.title}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-black bg-opacity-0 md:group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center request-overlay" data-card-index="${index}">
+                                        <button onclick='requestBook(event, ${index})' 
+                                                class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2 text-sm request-btn">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4" />
+                                            </svg>
+                                            Request
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <div class="w-full h-full flex items-center justify-center text-gray-600">
+                                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                        </svg>
+                                    </div>
+                                `}
+                            </div>
+                            <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
+                            <p class="text-xs text-gray-400 line-clamp-1">
+                                ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
+                            </p>
+                            ${book.release_year ? `<p class="text-xs text-gray-500">${book.release_year}</p>` : ''}
+                        </div>
+                    `).join('')}
                 </div>
             `;
+            
+            // Store books in a global variable for access by requestBook
+            window.currentBooks = books;
         }
-
-        // Create a single book card
-        function createBookCard(book, index) {
-            const imageUrl = book.image?.url || '';
-            const authorName = getAuthorName(book);
-            const yearDisplay = book.release_year ? `<p class="text-xs text-gray-500">${book.release_year}</p>` : '';
-
-            if (imageUrl) {
-                return `
-                    <div class="group cursor-pointer" data-book-index="${index}">
-                        <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card" onclick="showMoreInfo(${index})">
-                            <img src="${imageUrl}" alt="${book.title}" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-black bg-opacity-0 md:group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center">
-                                <button onclick="showMoreInfo(${index}); event.stopPropagation();" 
-                                        class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2 text-sm">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    More Info
-                                </button>
-                            </div>
-                        </div>
-                        <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
-                        <p class="text-xs text-gray-400 line-clamp-1">${authorName}</p>
-                        ${yearDisplay}
-                    </div>
-                `;
+        
+        function toggleRequestButton(event, index) {
+            // Only handle on mobile/tablet (not on desktop hover)
+            if (window.innerWidth >= 768) return; // md breakpoint
+            
+            event.stopPropagation();
+            
+            // Close all other open overlays
+            document.querySelectorAll('.request-overlay').forEach(overlay => {
+                if (overlay.dataset.cardIndex !== index.toString()) {
+                    overlay.classList.remove('show-mobile');
+                    overlay.querySelector('.request-btn').classList.remove('opacity-100');
+                }
+            });
+            
+            // Toggle this overlay
+            const overlay = event.currentTarget.querySelector('.request-overlay');
+            const btn = overlay.querySelector('.request-btn');
+            
+            if (overlay.classList.contains('show-mobile')) {
+                overlay.classList.remove('show-mobile');
+                btn.classList.remove('opacity-100');
             } else {
-                return `
-                    <div class="group cursor-pointer" data-book-index="${index}">
-                        <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card flex items-center justify-center" onclick="showMoreInfo(${index})">
-                            <svg class="w-12 h-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                            </svg>
-                        </div>
-                        <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
-                        <p class="text-xs text-gray-400 line-clamp-1">${authorName}</p>
-                        ${yearDisplay}
-                    </div>
-                `;
+                overlay.classList.add('show-mobile');
+                btn.classList.add('opacity-100');
             }
         }
-
-        // Show more info modal
-        function showMoreInfo(index) {
-            const book = currentBooks[index];
-            if (!book) return;
-
-            // Populate modal fields
-            DOM.modalImage.src = book.image?.url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>';
-            DOM.modalImage.alt = book.title;
-            DOM.modalTitle.textContent = book.title;
-            DOM.modalAuthor.textContent = getAuthorName(book);
-            DOM.modalYear.textContent = book.release_year || 'N/A';
-            DOM.modalIsbn.textContent = book.isbn_13 || book.isbn_10 || 'N/A';
-            DOM.modalRating.textContent = book.average_rating ? `${book.average_rating.toFixed(2)} / 5.0` : 'N/A';
-            DOM.modalDescription.textContent = book.description || 'No description available.';
-
-            // Handle Hardcover link
-            if (book.url) {
-                DOM.modalHardcoverLink.href = book.url;
-                DOM.modalHardcoverLink.classList.remove('hidden');
-            } else {
-                DOM.modalHardcoverLink.classList.add('hidden');
-            }
-
-            // Set up request button
-            DOM.modalRequestBtn.onclick = (e) => {
-                e.stopPropagation();
-                downloadBook(book);
-                DOM.modal.classList.add('hidden');
-            };
-
-            // Show modal
-            DOM.modal.classList.remove('hidden');
+        
+        function requestBook(event, index) {
+            event.stopPropagation();
+            const book = window.currentBooks[index];
+            downloadBook(book);
         }
-
-        // Download book
+        
         async function downloadBook(book) {
-            console.log('Requesting book:', book);
+            console.log('Requesting book:', book); // Debug log
             showStatus('Sending to Prowlarr...');
             
             try {
+                const author = book.author_names && book.author_names[0] ? 
+                    book.author_names[0] : 
+                    (book.contributions && book.contributions[0] && book.contributions[0].author ? 
+                        book.contributions[0].author.name : 'Unknown');
+                
                 const payload = {
                     title: book.title,
-                    author: getAuthorName(book),
+                    author: author,
                     isbn: book.isbn_13 || book.isbn_10,
                     year: book.release_year
                 };
                 
-                console.log('Sending payload:', payload);
+                console.log('Sending payload:', payload); // Debug log
                 
                 const response = await fetch('/api/download', {
                     method: 'POST',
@@ -238,69 +245,6 @@
                 showStatus('Error connecting to server');
             }
         }
-
-        // Close modal when clicking outside
-        document.addEventListener('click', (e) => {
-            if (DOM.modal && e.target === DOM.modal) {
-                DOM.modal.classList.add('hidden');
-            }
-        });
     </script>
-    
-    <!-- More Info Modal -->
-    <div id="moreInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-        <div class="bg-[#1a1f2e] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-start p-6 border-b border-gray-700">
-                <h2 id="modal-title" class="text-2xl font-bold text-white">Book Title</h2>
-                <button onclick="document.getElementById('moreInfoModal').classList.add('hidden')" class="text-gray-400 hover:text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            
-            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Left Column: Image and Request Button -->
-                <div class="md:col-span-1 flex flex-col items-center">
-                    <img id="modal-image" src="" alt="Book Cover" class="w-full max-w-xs aspect-[2/3] rounded-lg object-cover shadow-lg mb-4">
-                    <button id="modal-request-btn" class="w-full max-w-xs px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center justify-center gap-2 text-lg transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4" />
-                        </svg>
-                        Request Book
-                    </button>
-                </div>
-                
-                <!-- Right Column: Details and Description -->
-                <div class="md:col-span-2 text-gray-300">
-                    <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
-                        <div>
-                            <p class="font-semibold text-gray-400">Author</p>
-                            <p id="modal-author" class="text-white"></p>
-                        </div>
-                        <div>
-                            <p class="font-semibold text-gray-400">Year</p>
-                            <p id="modal-year" class="text-white"></p>
-                        </div>
-                        <div>
-                            <p class="font-semibold text-gray-400">ISBN (13/10)</p>
-                            <p id="modal-isbn" class="text-white"></p>
-                        </div>
-                        <div>
-                            <p class="font-semibold text-gray-400">Average Rating</p>
-                            <p id="modal-rating" class="text-white"></p>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-semibold mb-2 text-white">Description</h3>
-                    <p id="modal-description" class="mb-6 text-sm leading-relaxed"></p>
-                    
-                    <a id="modal-hardcover-link" href="#" target="_blank" class="inline-flex items-center text-indigo-400 hover:text-indigo-300 transition-colors text-sm font-medium">
-                        View on Hardcover
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
-
