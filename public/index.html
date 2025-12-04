@@ -140,15 +140,15 @@
                     ${books.map(book => `
                         <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-colors">
                             <div class="flex gap-4">
-                                ${book.image?.url ? `
+                                ${book.image && book.image.url ? `
                                     <img src="${book.image.url}" alt="${book.title}" class="w-24 h-32 object-cover rounded">
                                 ` : ''}
                                 
                                 <div class="flex-1">
-                                    <h3 class="text-xl font-semibold mb-1">${book.title}${book.subtitle ? `: ${book.subtitle}` : ''}</h3>
+                                    <h3 class="text-xl font-semibold mb-1">${book.title}${book.subtitle ? ': ' + book.subtitle : ''}</h3>
                                     <p class="text-slate-400 mb-2">
-                                        ${book.author_names?.[0] || book.contributions?.[0]?.author?.name || 'Unknown Author'}
-                                        ${book.release_year ? ` • ${book.release_year}` : ''}
+                                        ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
+                                        ${book.release_year ? ' • ' + book.release_year : ''}
                                     </p>
                                     
                                     ${book.description ? `
@@ -156,49 +156,13 @@
                                     ` : ''}
                                     
                                     <div class="flex items-center gap-3 text-sm text-slate-400">
-                                        ${book.isbn_13 || book.isbn_10 ? `<span>ISBN: ${book.isbn_13 || book.isbn_10}</span>` : ''}
-                                        ${book.pages ? `<span>• ${book.pages} pages</span>` : ''}
+                                        ${book.isbn_13 || book.isbn_10 ? '<span>ISBN: ' + (book.isbn_13 || book.isbn_10) + '</span>' : ''}
+                                        ${book.pages ? '<span>• ' + book.pages + ' pages</span>' : ''}
                                     </div>
                                 </div>
                                 
                                 <div class="flex items-center">
-                                    <button onclick='downloadBook(${JSON.stringify(book)})' 
-                                            class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        Download
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }            <div class="flex gap-4">
-                                ${book.image ? `
-                                    <img src="${book.image}" alt="${book.title}" class="w-24 h-32 object-cover rounded">
-                                ` : ''}
-                                
-                                <div class="flex-1">
-                                    <h3 class="text-xl font-semibold mb-1">${book.title}</h3>
-                                    <p class="text-slate-400 mb-2">
-                                        ${book.contributions?.[0]?.author?.name || 'Unknown Author'}
-                                        ${book.release_year ? ` • ${book.release_year}` : ''}
-                                    </p>
-                                    
-                                    ${book.description ? `
-                                        <p class="text-slate-300 text-sm mb-3 line-clamp-2">${book.description}</p>
-                                    ` : ''}
-                                    
-                                    <div class="flex items-center gap-3 text-sm text-slate-400">
-                                        ${book.isbn_13 ? `<span>ISBN: ${book.isbn_13}</span>` : ''}
-                                        ${book.pages ? `<span>• ${book.pages} pages</span>` : ''}
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center">
-                                    <button onclick='downloadBook(${JSON.stringify(book)})' 
+                                    <button onclick='downloadBook(${JSON.stringify(book).replace(/'/g, "&#39;")})' 
                                             class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors flex items-center gap-2">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -222,7 +186,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         title: book.title,
-                        author: book.author_names?.[0] || book.contributions?.[0]?.author?.name || 'Unknown',
+                        author: book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown'),
                         isbn: book.isbn_13 || book.isbn_10,
                         year: book.release_year
                     })
