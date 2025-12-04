@@ -160,9 +160,6 @@ function mapHardcoverHit(hit) {
     average_rating: hit.document.average_rating, 
     url: hit.document.url
   };
-}rage_rating: hit.document.average_rating, 
-    url: hit.document.url
-  };
 }
 
 // API Routes
