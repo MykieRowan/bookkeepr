@@ -114,7 +114,7 @@ async function downloadFromProwlarr(indexerId, guid) {
   }
 }
 
-// Hardcover GraphQL query constant
+// Hardcover GraphQL query constant (Updated to fetch all required fields)
 const HARDCOVER_SEARCH_QUERY = `
   query SearchBooks($query: String!) {
     search(query: $query, query_type: "Book", per_page: 20) {
@@ -141,8 +141,9 @@ const HARDCOVER_SEARCH_QUERY = `
   }
 `;
 
-// Map Hardcover hit to book object
+// Map Hardcover hit to book object (Original mapping)
 function mapHardcoverHit(hit) {
+  // This is the original mapping logic
   return {
     id: hit.document.id,
     title: hit.document.title,
@@ -156,7 +157,9 @@ function mapHardcoverHit(hit) {
       author: contrib.author
     })),
     author_names: hit.document.author_names,
-    average_rating: hit.document.average_rating,
+    // These fields were added for the new feature but will be null/undefined
+    // until the query is updated in the next phase.
+    average_rating: hit.document.average_rating, 
     url: hit.document.url
   };
 }
@@ -200,7 +203,7 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    // Extract the results and map to book objects
+    // The results contain a Typesense response with hits
     const searchResults = response.data.data?.search?.results || [];
     const books = searchResults.map(mapHardcoverHit);
 
