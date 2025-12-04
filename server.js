@@ -32,6 +32,27 @@ const CONFIG = {
   }
 };
 
+// Constants for filtering
+const AUDIOBOOK_KEYWORDS = ['audiobook', 'audio book', '.m4b', '.mp3'];
+const EBOOK_FORMATS = ['epub', 'mobi', 'pdf', 'azw', 'azw3'];
+
+// Helper function to check if a title is an audiobook
+function isAudiobook(title) {
+  const lowerTitle = title.toLowerCase();
+  return AUDIOBOOK_KEYWORDS.some(keyword => lowerTitle.includes(keyword));
+}
+
+// Helper function to check if a title contains an ebook format
+function isEbookFormat(title) {
+  const lowerTitle = title.toLowerCase();
+  return EBOOK_FORMATS.some(format => lowerTitle.includes(format));
+}
+
+// Helper function to check if a title is in EPUB format
+function isEpubFormat(title) {
+  return /epub/i.test(title);
+}
+
 // Search Prowlarr for a book
 async function searchProwlarr(title, author, isbn) {
   try {
@@ -93,6 +114,53 @@ async function downloadFromProwlarr(indexerId, guid) {
   }
 }
 
+// Hardcover GraphQL query constant
+const HARDCOVER_SEARCH_QUERY = `
+  query SearchBooks($query: String!) {
+    search(query: $query, query_type: "Book", per_page: 20) {
+      results {
+        document {
+          id
+          title
+          description
+          image
+          release_year
+          pages
+          isbns
+          contributions {
+            author {
+              name
+            }
+          }
+          author_names
+          average_rating
+          url
+        }
+      }
+    }
+  }
+`;
+
+// Map Hardcover hit to book object
+function mapHardcoverHit(hit) {
+  return {
+    id: hit.document.id,
+    title: hit.document.title,
+    description: hit.document.description,
+    image: hit.document.image,
+    release_year: hit.document.release_year,
+    pages: hit.document.pages,
+    isbn_10: hit.document.isbns?.[1],
+    isbn_13: hit.document.isbns?.[0],
+    contributions: hit.document.contributions?.map(contrib => ({
+      author: contrib.author
+    })),
+    author_names: hit.document.author_names,
+    average_rating: hit.document.average_rating,
+    url: hit.document.url
+  };
+}
+
 // API Routes
 
 // Proxy Hardcover search through backend
@@ -112,13 +180,7 @@ app.post('/api/search', async (req, res) => {
     const response = await axios.post(
       'https://api.hardcover.app/v1/graphql',
       {
-        query: `
-          query SearchBooks($query: String!) {
-            search(query: $query, query_type: "Book", per_page: 20) {
-              results
-            }
-          }
-        `,
+        query: HARDCOVER_SEARCH_QUERY,
         variables: { query: query }
       },
       {
@@ -138,26 +200,9 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    // The results contain a Typesense response with hits
-    const searchResults = response.data.data?.search?.results || {};
-    const hits = searchResults.hits || [];
-    
-    // Extract the book documents from the hits and map to expected frontend format
-    const books = hits.map(hit => ({
-      id: hit.document.id,
-      title: hit.document.title,
-      // Don't include subtitle - keep it simple
-      description: hit.document.description,
-      image: hit.document.image,
-      release_year: hit.document.release_year,
-      pages: hit.document.pages,
-      isbn_10: hit.document.isbns?.[1], // Second ISBN if available
-      isbn_13: hit.document.isbns?.[0], // First ISBN if available
-      contributions: hit.document.contributions?.map(contrib => ({
-        author: contrib.author
-      })),
-      author_names: hit.document.author_names
-    }));
+    // Extract the results and map to book objects
+    const searchResults = response.data.data?.search?.results || [];
+    const books = searchResults.map(mapHardcoverHit);
 
     res.json({
       success: true,
@@ -173,6 +218,7 @@ app.post('/api/search', async (req, res) => {
   }
 });
 
+// Download endpoint
 app.post('/api/download', async (req, res) => {
   try {
     const { title, author, isbn, year } = req.body;
@@ -201,28 +247,21 @@ app.post('/api/download', async (req, res) => {
     }
 
     // Filter and sort results
-    // Only include EPUB/MOBI/PDF formats (exclude audiobooks)
-    // Prefer EPUB format, then sort by seeders
     const sortedResults = results
       .filter(r => {
         if (!r.title || !r.guid) return false;
-        const title = r.title.toLowerCase();
-        // Exclude audiobooks
-        if (title.includes('audiobook') || title.includes('audio book') || 
-            title.includes('.m4b') || title.includes('.mp3')) {
-          return false;
-        }
-        // Only include ebook formats
-        return title.includes('epub') || title.includes('mobi') || 
-               title.includes('pdf') || title.includes('azw') || title.includes('azw3');
+        // Exclude audiobooks and only include ebook formats
+        return !isAudiobook(r.title) && isEbookFormat(r.title);
       })
       .sort((a, b) => {
-        const aIsEpub = /epub/i.test(a.title);
-        const bIsEpub = /epub/i.test(b.title);
+        // Prefer EPUB format
+        const aIsEpub = isEpubFormat(a.title);
+        const bIsEpub = isEpubFormat(b.title);
         
         if (aIsEpub && !bIsEpub) return -1;
         if (!aIsEpub && bIsEpub) return 1;
         
+        // Sort by seeders
         return (b.seeders || 0) - (a.seeders || 0);
       });
 
@@ -291,3 +330,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   Calibre: ${CONFIG.calibre.ingestFolder}`);
   console.log(`\n📝 Make sure to set environment variables in docker-compose.yml!`);
 });
+
