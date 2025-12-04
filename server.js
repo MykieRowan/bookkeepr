@@ -109,98 +109,93 @@ app.post('/api/search', async (req, res) => {
 
     console.log(`Searching Hardcover for: ${query} (type: ${searchType})`);
 
-    // Build GraphQL query based on search type
-    let graphqlQuery;
-    let variables;
+    let responseData;
 
     if (searchType === 'isbn') {
-      graphqlQuery = `
-        query SearchByISBN($isbn: String!) {
-          books(where: {_or: [{isbn_10: {_eq: $isbn}}, {isbn_13: {_eq: $isbn}}]}, limit: 20) {
-            id
-            title
-            description
-            image
-            release_year
-            pages
-            isbn_10
-            isbn_13
-            rating
-            slug
-            contributions {
-              author {
-                name
+      // Direct ISBN query
+      const response = await axios.post(
+        'https://api.hardcover.app/v1/graphql',
+        {
+          query: `
+            query SearchByISBN($isbn: String!) {
+              books(where: {_or: [{isbn_10: {_eq: $isbn}}, {isbn_13: {_eq: $isbn}}]}, limit: 20) {
+                id
+                title
+                description
+                image
+                release_year
+                pages
+                isbn_10
+                isbn_13
+                rating
+                slug
+                contributions {
+                  author {
+                    name
+                  }
+                }
               }
             }
-          }
-        }
-      `;
-      variables = { isbn: query };
-    } else {
-      // Use search API for title and author
-      graphqlQuery = `
-        query SearchBooks($query: String!) {
-          search(query: $query, query_type: "Book", per_page: 20) {
-            results
-          }
-        }
-      `;
-      variables = { query: query };
-    }
-
-    const response = await axios.post(
-      'https://api.hardcover.app/v1/graphql',
-      {
-        query: `
-          query SearchBooks($query: String!) {
-            search(query: $query, query_type: "Book", per_page: 20) {
-              results
-            }
-          }
-        `,
-        variables: { query: query }
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
+          `,
+          variables: { isbn: query }
         },
-        timeout: 10000
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
+          },
+          timeout: 10000
+        }
+      );
+      
+      if (response.data.errors) {
+        console.error('GraphQL errors:', response.data.errors);
+        return res.status(500).json({
+          success: false,
+          error: 'Hardcover API error'
+        });
       }
-    );
+      
+      responseData = response.data.data?.books || [];
+    } else {
+      // Search API for title/author
+      const response = await axios.post(
+        'https://api.hardcover.app/v1/graphql',
+        {
+          query: `
+            query SearchBooks($query: String!) {
+              search(query: $query, query_type: "Book", per_page: 20) {
+                results
+              }
+            }
+          `,
+          variables: { query: query }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
+          },
+          timeout: 10000
+        }
+      );
 
-    if (response.data.errors) {
-      console.error('GraphQL errors:', response.data.errors);
-      return res.status(500).json({
-        success: false,
-        error: 'Hardcover API error - check your API key'
-      });
+      if (response.data.errors) {
+        console.error('GraphQL errors:', response.data.errors);
+        return res.status(500).json({
+          success: false,
+          error: 'Hardcover API error'
+        });
+      }
+
+      const searchResults = response.data.data?.search?.results || {};
+      const hits = searchResults.hits || [];
+      responseData = hits.map(hit => hit.document);
     }
-
-    // The results contain a Typesense response with hits
-    const searchResults = response.data.data?.search?.results || {};
-    const hits = searchResults.hits || [];
-    
-    // Extract the book documents from the hits and map to expected frontend format
-    const books = hits.map(hit => ({
-      id: hit.document.id,
-      title: hit.document.title,
-      // Don't include subtitle - keep it simple
-      description: hit.document.description,
-      image: hit.document.image,
-      release_year: hit.document.release_year,
-      pages: hit.document.pages,
-      isbn_10: hit.document.isbns?.[1], // Second ISBN if available
-      isbn_13: hit.document.isbns?.[0], // First ISBN if available
-      contributions: hit.document.contributions?.map(contrib => ({
-        author: contrib.author
-      })),
-      author_names: hit.document.author_names
-    }));
 
     res.json({
       success: true,
-      books: books
+      books: responseData
     });
 
   } catch (error) {
