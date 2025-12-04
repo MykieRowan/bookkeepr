@@ -114,24 +114,12 @@ app.post('/api/search', async (req, res) => {
       {
         query: `
           query SearchBooks($query: String!) {
-            books(where: {title: {_ilike: $query}}, limit: 20) {
-              id
-              title
-              description
-              image
-              release_year
-              pages
-              isbn_10
-              isbn_13
-              contributions {
-                author {
-                  name
-                }
-              }
+            search(query: $query, query_type: "Book", per_page: 20) {
+              results
             }
           }
         `,
-        variables: { query: `%${query}%` }
+        variables: { query: query }
       },
       {
         headers: {
@@ -150,7 +138,18 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    const books = response.data.data?.books || [];
+    // Parse the results JSON string
+    const results = response.data.data?.search?.results;
+    if (!results) {
+      return res.json({
+        success: true,
+        books: []
+      });
+    }
+
+    // The results come as a JSON string, so we need to parse it
+    const books = JSON.parse(results);
+
     res.json({
       success: true,
       books: books
