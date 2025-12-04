@@ -205,7 +205,7 @@ app.post('/api/download', async (req, res) => {
     // Prefer EPUB format, then sort by seeders
     const sortedResults = results
       .filter(r => {
-        if (!r.title) return false;
+        if (!r.title || !r.guid) return false;
         const title = r.title.toLowerCase();
         // Exclude audiobooks
         if (title.includes('audiobook') || title.includes('audio book') || 
@@ -214,7 +214,7 @@ app.post('/api/download', async (req, res) => {
         }
         // Only include ebook formats
         return title.includes('epub') || title.includes('mobi') || 
-               title.includes('pdf') || title.includes('azw');
+               title.includes('pdf') || title.includes('azw') || title.includes('azw3');
       })
       .sort((a, b) => {
         const aIsEpub = /epub/i.test(a.title);
@@ -225,6 +225,13 @@ app.post('/api/download', async (req, res) => {
         
         return (b.seeders || 0) - (a.seeders || 0);
       });
+
+    if (sortedResults.length === 0) {
+      return res.json({
+        success: false,
+        error: 'No ebook results found (only audiobooks available)'
+      });
+    }
 
     const bestResult = sortedResults[0];
     console.log(`Selected: ${bestResult.title}`);
