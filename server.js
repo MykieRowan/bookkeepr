@@ -113,37 +113,36 @@ async function downloadFromProwlarr(indexerId, guid) {
     throw error;
   }
 }
-
 // Hardcover GraphQL query constant (Updated to fetch all required fields)
 const HARDCOVER_SEARCH_QUERY = `
   query SearchBooks($query: String!) {
     search(query: $query, query_type: "Book", per_page: 20) {
       results {
-        document {
-          id
-          title
-          description
-          image
-          release_year
-          pages
-          isbns
-          contributions {
-            author {
-              name
+        hits {
+          document {
+            id
+            title
+            description
+            image
+            release_year
+            pages
+            isbns
+            contributions {
+              author {
+                name
+              }
             }
+            author_names
+            average_rating
+            url
           }
-          author_names
-          average_rating
-          url
         }
       }
     }
   }
-`;
-
-// Map Hardcover hit to book object (Original mapping)
+`;// Map Hardcover hit to book object (Updated mapping)
 function mapHardcoverHit(hit) {
-  // This is the original mapping logic
+  // The hit object contains a document property with all the book data
   return {
     id: hit.document.id,
     title: hit.document.title,
@@ -157,9 +156,11 @@ function mapHardcoverHit(hit) {
       author: contrib.author
     })),
     author_names: hit.document.author_names,
-    // These fields were added for the new feature but will be null/undefined
-    // until the query is updated in the next phase.
+    // The following fields were added for the new feature
     average_rating: hit.document.average_rating, 
+    url: hit.document.url
+  };
+}rage_rating: hit.document.average_rating, 
     url: hit.document.url
   };
 }
@@ -204,8 +205,9 @@ app.post('/api/search', async (req, res) => {
     }
 
     // The results contain a Typesense response with hits
-    const searchResults = response.data.data?.search?.results || [];
-    const books = searchResults.map(mapHardcoverHit);
+    const searchResults = response.data.data?.search?.results || {};
+    const hits = searchResults.hits || [];
+    const books = hits.map(mapHardcoverHit);
 
     res.json({
       success: true,
