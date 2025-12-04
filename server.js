@@ -189,7 +189,7 @@ app.post('/api/search', async (req, res) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
+          'Authorization': `Bearer ${CONFIG.hardcover.apiKey.replace(/^Bearer\s+/i, '')}`
         },
         timeout: 10000
       }
