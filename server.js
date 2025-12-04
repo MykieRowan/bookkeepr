@@ -138,8 +138,26 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    // The results are already parsed JSON objects, not a string
-    const books = response.data.data?.search?.results || [];
+    // The results contain a Typesense response with hits
+    const searchResults = response.data.data?.search?.results || {};
+    const hits = searchResults.hits || [];
+    
+    // Extract the book documents from the hits and map to expected frontend format
+    const books = hits.map(hit => ({
+      id: hit.document.id,
+      title: hit.document.title,
+      subtitle: hit.document.subtitle,
+      description: hit.document.description,
+      image: hit.document.image,
+      release_year: hit.document.release_year,
+      pages: hit.document.pages,
+      isbn_10: hit.document.isbns?.[1], // Second ISBN if available
+      isbn_13: hit.document.isbns?.[0], // First ISBN if available
+      contributions: hit.document.contributions?.map(contrib => ({
+        author: contrib.author
+      })),
+      author_names: hit.document.author_names
+    }));
 
     res.json({
       success: true,
