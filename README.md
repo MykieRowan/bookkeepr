@@ -1,8 +1,8 @@
-# BookKeepr
+# Liberry
 
 A web interface for managing your book acquisition pipeline. Search for books on Hardcover, automatically send them to Prowlarr for indexer searches, download via qBitTorrent, and organize with Calibre.
 
-![BookKeepr Pipeline](https://img.shields.io/badge/Hardcover-Prowlarr-blue) ![Pipeline](https://img.shields.io/badge/Prowlarr-qBitTorrent-green) ![Final](https://img.shields.io/badge/qBitTorrent-Calibre-orange)
+![Liberry Pipeline](https://img.shields.io/badge/Hardcover-Prowlarr-blue) ![Pipeline](https://img.shields.io/badge/Prowlarr-qBitTorrent-green) ![Final](https://img.shields.io/badge/qBitTorrent-Calibre-orange)
 
 ## Features
 
@@ -254,4 +254,3 @@ If you encounter issues:
    - Your docker-compose.yml (remove sensitive data)
    - Container logs
    - Steps to reproduce the issue
-# bookkeepr

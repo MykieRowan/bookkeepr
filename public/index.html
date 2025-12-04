@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BookKeepr</title>
+    <title>Liberry</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .line-clamp-2 {
@@ -12,51 +12,43 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+        body {
+            background: #0f1419;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-screen">
+<body class="bg-[#0f1419] text-white min-h-screen">
     <div id="app" class="p-6">
-        <div class="max-w-6xl mx-auto">
+        <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="text-center mb-8">
-                <div class="flex items-center justify-center gap-3 mb-3">
-                    <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <svg class="w-10 h-10 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
-                    <h1 class="text-4xl font-bold">BookKeepr</h1>
+                    <h1 class="text-3xl font-bold">Liberry</h1>
                 </div>
-                <p class="text-slate-400">Search → Prowlarr → qBitTorrent → Calibre</p>
-            </div>
 
             <!-- Search Bar -->
             <div class="mb-8">
-                <div class="flex gap-3">
-                    <div class="flex-1 relative">
-                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input type="text" id="searchInput" placeholder="Search for a book title or author..."
-                               class="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 text-white placeholder-slate-400"
-                               onkeypress="if(event.key==='Enter') searchBooks()">
-                    </div>
-                    <button onclick="searchBooks()" id="searchBtn"
-                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        Search
-                    </button>
+                <div class="relative">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search for a book title or author..."
+                           class="w-full pl-12 pr-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg focus:outline-none focus:border-indigo-500 text-white placeholder-gray-400"
+                           onkeypress="if(event.key==='Enter') searchBooks()">
                 </div>
             </div>
 
             <!-- Status Message -->
-            <div id="statusMsg" class="hidden mb-6 p-4 bg-slate-800 border border-slate-700 rounded-lg text-center"></div>
+            <div id="statusMsg" class="hidden mb-6 p-4 bg-[#1a1f2e] border border-gray-700 rounded-lg text-center text-gray-300"></div>
 
             <!-- Search Results -->
             <div id="results"></div>
 
             <!-- Empty State -->
-            <div id="emptyState" class="text-center py-16 text-slate-400">
+            <div id="emptyState" class="text-center py-16 text-gray-400">
                 <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
@@ -135,42 +127,35 @@
         function displayResults(books) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = `
-                <h2 class="text-2xl font-semibold mb-4">Search Results</h2>
-                <div class="space-y-4">
+                <h2 class="text-xl font-semibold mb-4">Search Results</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     ${books.map(book => `
-                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-colors">
-                            <div class="flex gap-4">
+                        <div class="group cursor-pointer">
+                            <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] mb-2">
                                 ${book.image && book.image.url ? `
-                                    <img src="${book.image.url}" alt="${book.title}" class="w-24 h-32 object-cover rounded">
-                                ` : ''}
-                                
-                                <div class="flex-1">
-                                    <h3 class="text-xl font-semibold mb-1">${book.title}${book.subtitle ? ': ' + book.subtitle : ''}</h3>
-                                    <p class="text-slate-400 mb-2">
-                                        ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
-                                        ${book.release_year ? ' • ' + book.release_year : ''}
-                                    </p>
-                                    
-                                    ${book.description ? `
-                                        <p class="text-slate-300 text-sm mb-3 line-clamp-2">${book.description}</p>
-                                    ` : ''}
-                                    
-                                    <div class="flex items-center gap-3 text-sm text-slate-400">
-                                        ${book.isbn_13 || book.isbn_10 ? '<span>ISBN: ' + (book.isbn_13 || book.isbn_10) + '</span>' : ''}
-                                        ${book.pages ? '<span>• ' + book.pages + ' pages</span>' : ''}
+                                    <img src="${book.image.url}" alt="${book.title}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center">
+                                        <button onclick='downloadBook(${JSON.stringify(book).replace(/'/g, "&#39;")})' 
+                                                class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2 text-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4" />
+                                            </svg>
+                                            Request
+                                        </button>
                                     </div>
-                                </div>
-                                
-                                <div class="flex items-center">
-                                    <button onclick='downloadBook(${JSON.stringify(book).replace(/'/g, "&#39;")})' 
-                                            class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                ` : `
+                                    <div class="w-full h-full flex items-center justify-center text-gray-600">
+                                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                         </svg>
-                                        Download
-                                    </button>
-                                </div>
+                                    </div>
+                                `}
                             </div>
+                            <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
+                            <p class="text-xs text-gray-400">
+                                ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
+                            </p>
+                            ${book.release_year ? `<p class="text-xs text-gray-500">${book.release_year}</p>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -195,7 +180,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus('✓ Sent to Prowlarr! Download should start shortly.');
+                    showStatus('✓ Book requested! Download should start shortly.');
                 } else {
                     showStatus('Error: ' + result.error);
                 }

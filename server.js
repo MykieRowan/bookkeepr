@@ -146,7 +146,7 @@ app.post('/api/search', async (req, res) => {
     const books = hits.map(hit => ({
       id: hit.document.id,
       title: hit.document.title,
-      subtitle: hit.document.subtitle,
+      // Don't include subtitle - keep it simple
       description: hit.document.description,
       image: hit.document.image,
       release_year: hit.document.release_year,
@@ -201,9 +201,21 @@ app.post('/api/download', async (req, res) => {
     }
 
     // Filter and sort results
+    // Only include EPUB/MOBI/PDF formats (exclude audiobooks)
     // Prefer EPUB format, then sort by seeders
     const sortedResults = results
-      .filter(r => r.title && r.guid)
+      .filter(r => {
+        if (!r.title) return false;
+        const title = r.title.toLowerCase();
+        // Exclude audiobooks
+        if (title.includes('audiobook') || title.includes('audio book') || 
+            title.includes('.m4b') || title.includes('.mp3')) {
+          return false;
+        }
+        // Only include ebook formats
+        return title.includes('epub') || title.includes('mobi') || 
+               title.includes('pdf') || title.includes('azw');
+      })
       .sort((a, b) => {
         const aIsEpub = /epub/i.test(a.title);
         const bIsEpub = /epub/i.test(b.title);
@@ -264,7 +276,7 @@ app.get('/', (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 BookKeepr Server running on http://0.0.0.0:${PORT}`);
+  console.log(`\n📚 Liberry Server running on http://0.0.0.0:${PORT}`);
   console.log(`\n⚙️  Configuration:`);
   console.log(`   Hardcover: ${CONFIG.hardcover.apiKey ? '✓ API key set' : '✗ API key missing'}`);
   console.log(`   Prowlarr: ${CONFIG.prowlarr.url}`);
