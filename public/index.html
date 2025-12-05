@@ -123,6 +123,28 @@
                     return;
                 }
                 
+                // Check which books are in Calibre
+                showStatus('Checking library...');
+                try {
+                    const calibreResponse = await fetch('/api/check-calibre', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ books: data.books })
+                    });
+                    
+                    const calibreData = await calibreResponse.json();
+                    
+                    // Add inLibrary flag to each book
+                    if (calibreData.success && calibreData.results) {
+                        data.books.forEach(book => {
+                            book.inLibrary = calibreData.results[book.id] || false;
+                        });
+                    }
+                } catch (calibreError) {
+                    console.error('Calibre check failed:', calibreError);
+                    // Continue anyway - just won't show library status
+                }
+                
                 hideStatus();
                 displayResults(data.books);
             } catch (error) {
@@ -141,6 +163,14 @@
                             <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card" onclick="toggleRequestButton(event, ${index})">
                                 ${book.image && book.image.url ? `
                                     <img src="${book.image.url}" alt="${book.title}" class="w-full h-full object-cover">
+                                    ${book.inLibrary ? `
+                                        <div class="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 shadow-lg">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            In Library
+                                        </div>
+                                    ` : ''}
                                     <div class="absolute inset-0 bg-black bg-opacity-0 md:group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center request-overlay" data-card-index="${index}">
                                         <div class="flex flex-col gap-2">
                                             <button onclick='showBookDetails(event, ${index})' 
@@ -151,11 +181,12 @@
                                                 More Info
                                             </button>
                                             <button onclick='requestBook(event, ${index})' 
-                                                    class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2 text-sm request-btn">
+                                                    class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 ${book.inLibrary ? 'bg-gray-600 hover:bg-gray-500' : 'bg-indigo-600 hover:bg-indigo-700'} rounded-lg font-medium flex items-center gap-2 text-sm request-btn"
+                                                    ${book.inLibrary ? 'title="Book already in library"' : ''}>
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4" />
                                                 </svg>
-                                                Request
+                                                ${book.inLibrary ? 'Download Again' : 'Request'}
                                             </button>
                                         </div>
                                     </div>
