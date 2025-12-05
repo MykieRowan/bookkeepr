@@ -31,7 +31,10 @@ const CONFIG = {
     password: process.env.QBIT_PASSWORD || 'adminadmin'
   },
   calibre: {
-    ingestFolder: process.env.CALIBRE_INGEST_FOLDER || '/calibre/ingest'
+    ingestFolder: process.env.CALIBRE_INGEST_FOLDER || '/calibre/ingest',
+    url: process.env.CALIBRE_URL || null,
+    username: process.env.CALIBRE_USERNAME || null,
+    password: process.env.CALIBRE_PASSWORD || null
   }
 };
 
@@ -73,17 +76,49 @@ async function loginToQBittorrent() {
 }
 
 // Add torrent to qBittorrent
-async function addTorrentToQBittorrent(downloadUrl, title) {
+async function addTorrentToQBittorrent(downloadUrl, title, viaProwlarr = false) {
   try {
     if (!qbitCookie) {
       await loginToQBittorrent();
     }
 
-    console.log(`Adding torrent to qBittorrent: ${title}`);
+    console.log(`\nAdding torrent to qBittorrent:`);
+    console.log(`  Title: ${title}`);
+    console.log(`  Download URL: ${downloadUrl}`);
+    console.log(`  Via Prowlarr: ${viaProwlarr}`);
     
     const FormData = require('form-data');
     const form = new FormData();
-    form.append('urls', downloadUrl);
+    
+    // If it's from Prowlarr, download the torrent file first
+    if (viaProwlarr && downloadUrl.startsWith('http')) {
+      console.log(`  Downloading torrent file through Prowlarr...`);
+      try {
+        const torrentResponse = await axios.get(downloadUrl, {
+          responseType: 'arraybuffer',
+          timeout: 10000,
+          headers: {
+            'X-Api-Key': CONFIG.prowlarr.apiKey
+          }
+        });
+        
+        console.log(`  Got torrent file, size: ${torrentResponse.data.length} bytes`);
+        
+        // Send the actual torrent file to qBittorrent
+        form.append('torrents', Buffer.from(torrentResponse.data), {
+          filename: 'download.torrent',
+          contentType: 'application/x-bittorrent'
+        });
+      } catch (downloadError) {
+        console.error(`  Failed to download torrent file: ${downloadError.message}`);
+        // Fall back to URL method
+        form.append('urls', downloadUrl);
+      }
+    } else {
+      // Use URL directly (for magnets or direct URLs)
+      form.append('urls', downloadUrl);
+    }
+    
     form.append('savepath', CONFIG.calibre.ingestFolder);
 
     const headers = { ...form.getHeaders() };
@@ -91,22 +126,30 @@ async function addTorrentToQBittorrent(downloadUrl, title) {
       headers['Cookie'] = qbitCookie;
     }
 
-    await axios.post(
+    console.log(`  Sending to: ${CONFIG.qbittorrent.url}/api/v2/torrents/add`);
+    
+    const response = await axios.post(
       `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
       form,
       { headers, timeout: 10000 }
     );
 
-    console.log('✓ Torrent added to qBittorrent');
+    console.log(`  qBittorrent response status: ${response.status}`);
+    console.log(`  qBittorrent response data: ${response.data}`);
+    console.log('✓ Torrent added to qBittorrent successfully');
     return true;
   } catch (error) {
     console.error('qBittorrent add error:', error.message);
+    if (error.response) {
+      console.error('  Response status:', error.response.status);
+      console.error('  Response data:', error.response.data);
+    }
     
     if (error.response && error.response.status === 403) {
       console.log('Session expired, re-logging in...');
       qbitCookie = null;
       await loginToQBittorrent();
-      return addTorrentToQBittorrent(downloadUrl, title);
+      return addTorrentToQBittorrent(downloadUrl, title, viaProwlarr);
     }
     
     return false;
@@ -162,15 +205,35 @@ async function searchMAM(title) {
 // Download from MAM
 async function downloadFromMAM(mamResult) {
   try {
-    console.log(`Downloading MAM torrent: ${mamResult.title}`);
+    console.log(`\nDownloading MAM torrent:`);
+    console.log(`  Title: ${mamResult.title}`);
+    console.log(`  ID: ${mamResult.id}`);
+    console.log(`  DL: ${mamResult.dl}`);
     
     const torrentUrl = `https://www.myanonamouse.net/tor/download.php/${mamResult.dl}`;
+    console.log(`  Torrent URL: ${torrentUrl}`);
     
     const torrentResponse = await axios.get(torrentUrl, {
-      headers: { 'Cookie': `mam_id=${CONFIG.mam.id}` },
+      headers: { 
+        'Cookie': `mam_id=${CONFIG.mam.id}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
       responseType: 'arraybuffer',
       timeout: 10000
     });
+
+    console.log(`  Downloaded torrent file, size: ${torrentResponse.data.length} bytes`);
+    console.log(`  Content-Type: ${torrentResponse.headers['content-type']}`);
+
+    // Check if we actually got a torrent file
+    if (torrentResponse.headers['content-type'] && 
+        !torrentResponse.headers['content-type'].includes('bittorrent') &&
+        !torrentResponse.headers['content-type'].includes('octet-stream')) {
+      console.error(`  ERROR: Did not receive a torrent file!`);
+      console.error(`  Received content type: ${torrentResponse.headers['content-type']}`);
+      console.error(`  First 200 chars of response: ${Buffer.from(torrentResponse.data).toString('utf8', 0, 200)}`);
+      return false;
+    }
 
     if (!qbitCookie) {
       await loginToQBittorrent();
@@ -189,16 +252,29 @@ async function downloadFromMAM(mamResult) {
       headers['Cookie'] = qbitCookie;
     }
 
-    await axios.post(
+    console.log(`  Sending to qBittorrent...`);
+    
+    const qbitResponse = await axios.post(
       `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
       form,
       { headers, timeout: 10000 }
     );
 
-    console.log('✓ MAM torrent added to qBittorrent');
+    console.log(`  qBittorrent response: ${qbitResponse.status} - ${qbitResponse.data}`);
+    console.log('✓ MAM torrent added to qBittorrent successfully');
     return true;
   } catch (error) {
     console.error('MAM download error:', error.message);
+    if (error.response) {
+      console.error('  Response status:', error.response.status);
+      console.error('  Response headers:', error.response.headers);
+      if (error.response.data) {
+        const dataPreview = Buffer.isBuffer(error.response.data) 
+          ? error.response.data.toString('utf8', 0, 200)
+          : JSON.stringify(error.response.data).substring(0, 200);
+        console.error('  Response data preview:', dataPreview);
+      }
+    }
     return false;
   }
 }
@@ -228,6 +304,76 @@ async function searchProwlarr(title, author, isbn) {
       console.error('Response data:', error.response.data);
     }
     throw error;
+  }
+}
+
+// Check if book exists in Calibre library
+async function checkCalibreForBook(title, author, isbn) {
+  if (!CONFIG.calibre.url) {
+    return { inLibrary: false, reason: 'Calibre not configured' };
+  }
+
+  try {
+    const auth = CONFIG.calibre.username && CONFIG.calibre.password 
+      ? { username: CONFIG.calibre.username, password: CONFIG.calibre.password }
+      : undefined;
+
+    // Try ISBN search first (most accurate)
+    if (isbn) {
+      try {
+        console.log(`Checking Calibre-Web for ISBN: ${isbn}`);
+        
+        const response = await axios.get(`${CONFIG.calibre.url}/ajax/search`, {
+          params: { query: `identifiers:${isbn}` },
+          auth,
+          timeout: 5000
+        });
+
+        if (response.data && response.data.book_ids && response.data.book_ids.length > 0) {
+          console.log(`✓ Book found by ISBN in Calibre (${response.data.book_ids.length} matches)`);
+          return { 
+            inLibrary: true, 
+            bookIds: response.data.book_ids,
+            count: response.data.book_ids.length
+          };
+        }
+      } catch (isbnError) {
+        console.log(`ISBN search failed: ${isbnError.message}`);
+      }
+    }
+
+    // Fall back to title search
+    if (title) {
+      console.log(`Checking Calibre-Web for title: ${title}`);
+      
+      // Clean the title for better searching
+      const cleanTitle = title.replace(/[:\(\)\[\]]/g, '').trim();
+      
+      const response = await axios.get(`${CONFIG.calibre.url}/ajax/search`, {
+        params: { query: cleanTitle },
+        auth,
+        timeout: 5000
+      });
+
+      if (response.data && response.data.book_ids && response.data.book_ids.length > 0) {
+        console.log(`✓ Book found by title in Calibre (${response.data.book_ids.length} matches)`);
+        return { 
+          inLibrary: true, 
+          bookIds: response.data.book_ids,
+          count: response.data.book_ids.length
+        };
+      }
+    }
+
+    console.log('Book not found in Calibre');
+    return { inLibrary: false };
+  } catch (error) {
+    console.error('Calibre check error:', error.message);
+    if (error.response) {
+      console.error('  Status:', error.response.status);
+      console.error('  Data:', error.response.data);
+    }
+    return { inLibrary: false, error: error.message };
   }
 }
 
@@ -279,6 +425,44 @@ app.post('/api/search', async (req, res) => {
   }
 });
 
+// New endpoint to check if books are in Calibre
+app.post('/api/check-calibre', async (req, res) => {
+  try {
+    const { books } = req.body;
+
+    if (!books || !Array.isArray(books)) {
+      return res.status(400).json({ success: false, error: 'Books array required' });
+    }
+
+    if (!CONFIG.calibre.url) {
+      return res.json({ success: true, results: {} });
+    }
+
+    // Check each book in parallel
+    const checks = await Promise.all(
+      books.map(async (book) => {
+        const result = await checkCalibreForBook(
+          book.title,
+          book.author_names?.[0] || book.author,
+          book.isbn_13 || book.isbn_10
+        );
+        return { id: book.id, ...result };
+      })
+    );
+
+    // Convert to object keyed by book ID
+    const results = {};
+    checks.forEach(check => {
+      results[check.id] = check.inLibrary;
+    });
+
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('Calibre check error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.post('/api/download', async (req, res) => {
   try {
     const { title, author, isbn, year } = req.body;
@@ -293,12 +477,13 @@ app.post('/api/download', async (req, res) => {
     console.log(`ISBN: ${isbn}`);
     console.log(`Year: ${year}`);
 
-    // Try MAM first if configured
-    if (CONFIG.mam.id) {
+    // Try MAM first if configured (set MAM_ID to empty or remove to disable)
+    if (CONFIG.mam.id && CONFIG.mam.id !== 'disabled') {
       console.log('Trying MAM direct search...');
       const mamResult = await searchMAM(title);
       
       if (mamResult) {
+        console.log('MAM found result, attempting download...');
         const downloaded = await downloadFromMAM(mamResult);
         
         if (downloaded) {
@@ -312,10 +497,12 @@ app.post('/api/download', async (req, res) => {
               seeders: mamResult.seeders
             }
           });
+        } else {
+          console.log('MAM download failed, falling back to Prowlarr...');
         }
+      } else {
+        console.log('MAM search found no results, falling back to Prowlarr...');
       }
-      
-      console.log('MAM search failed or no results, falling back to Prowlarr...');
     }
 
     // Fall back to Prowlarr
@@ -396,10 +583,14 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     config: {
       hardcover: CONFIG.hardcover.apiKey ? 'API key set' : 'API key missing',
-      mam: CONFIG.mam.id ? 'Cookie set' : 'Not configured',
+      mam: CONFIG.mam.id && CONFIG.mam.id !== 'disabled' ? 'Cookie set (disabled for now)' : 'Not configured',
       prowlarr: CONFIG.prowlarr.url,
       qbittorrent: CONFIG.qbittorrent.url,
-      calibre: CONFIG.calibre.ingestFolder
+      calibre: {
+        ingestFolder: CONFIG.calibre.ingestFolder,
+        url: CONFIG.calibre.url || 'Not configured',
+        checking: CONFIG.calibre.url ? 'Enabled' : 'Disabled'
+      }
     },
     timestamp: new Date().toISOString()
   });
