@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -37,114 +38,131 @@
                     </svg>
                     <h1 class="text-3xl font-bold">Liberry</h1>
                 </div>
-
-            <!-- Search Bar -->
-            <div class="mb-8">
-                <div class="relative">
-                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" id="searchInput" placeholder="Search for a book title or author..."
-                           class="w-full pl-12 pr-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg focus:outline-none focus:border-indigo-500 text-white placeholder-gray-400"
-                           oninput="handleSearchInput()"
-                           onkeypress="if(event.key==='Enter') searchBooks()">
-                </div>
             </div>
 
-            <!-- Status Message -->
-            <div id="statusMsg" class="hidden mb-6 p-4 bg-[#1a1f2e] border border-gray-700 rounded-lg text-center text-gray-300"></div>
-
-            <!-- Search Results -->
-            <div id="results"></div>
-
-            <!-- Empty State -->
-            <div id="emptyState" class="text-center py-16 text-gray-400">
-                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+```
+        <!-- Search Bar -->
+        <div class="mb-8">
+            <div class="relative">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <p class="text-lg">Search for a book to get started</p>
+                <input type="text" id="searchInput" placeholder="Search for a book..."
+                       class="w-full pl-12 pr-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg focus:outline-none focus:border-indigo-500 text-white placeholder-gray-400"
+                       oninput="handleSearchInput()"
+                       onkeypress="if(event.key==='Enter') searchBooks()">
             </div>
         </div>
-    </div>
 
-    <script>
-        function showStatus(msg) {
-            const status = document.getElementById('statusMsg');
-            status.textContent = msg;
-            status.classList.remove('hidden');
+        <!-- Book Details Modal -->
+        <div id="bookModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="closeModal(event)">
+            <div class="bg-[#1a1f2e] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <div id="modalContent"></div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMsg" class="hidden mb-6 p-4 bg-[#1a1f2e] border border-gray-700 rounded-lg text-center text-gray-300"></div>
+
+        <!-- Search Results -->
+        <div id="results"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-16 text-gray-400">
+            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <p class="text-lg">Search for a book to get started</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let searchTimeout;
+    
+    function showStatus(msg) {
+        const status = document.getElementById('statusMsg');
+        status.textContent = msg;
+        status.classList.remove('hidden');
+    }
+    
+    function hideStatus() {
+        document.getElementById('statusMsg').classList.add('hidden');
+    }
+    
+    function handleSearchInput() {
+        clearTimeout(searchTimeout);
+        const query = document.getElementById('searchInput').value.trim();
+        
+        if (!query) {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('emptyState').classList.remove('hidden');
+            hideStatus();
+            return;
         }
         
-        function hideStatus() {
-            document.getElementById('statusMsg').classList.add('hidden');
-        }
+        // Debounce search - wait 500ms after user stops typing
+        searchTimeout = setTimeout(() => searchBooks(), 500);
+    }
+    
+    async function searchBooks() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) return;
         
-        let searchTimeout;
+        showStatus('Searching Hardcover...');
+        document.getElementById('emptyState').classList.add('hidden');
         
-        function handleSearchInput() {
-            clearTimeout(searchTimeout);
-            const query = document.getElementById('searchInput').value.trim();
+        try {
+            const response = await fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            });
             
-            if (!query) {
+            const data = await response.json();
+            
+            if (!data.success) {
+                showStatus('Error: ' + data.error);
                 document.getElementById('results').innerHTML = '';
-                document.getElementById('emptyState').classList.remove('hidden');
-                hideStatus();
                 return;
             }
             
-            // Debounce search - wait 500ms after user stops typing
-            searchTimeout = setTimeout(() => searchBooks(), 500);
-        }
-        
-        async function searchBooks() {
-            const query = document.getElementById('searchInput').value.trim();
-            if (!query) return;
+            const books = data.books;
             
-            showStatus('Searching Hardcover...');
-            document.getElementById('emptyState').classList.add('hidden');
-            
-            try {
-                const response = await fetch('/api/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                });
-                
-                const data = await response.json();
-                
-                if (!data.success) {
-                    showStatus('Error: ' + data.error);
-                    document.getElementById('results').innerHTML = '';
-                    return;
-                }
-                
-                const books = data.books;
-                
-                if (books.length === 0) {
-                    showStatus('No books found');
-                    document.getElementById('results').innerHTML = '';
-                    return;
-                }
-                
-                hideStatus();
-                displayResults(books);
-                
-            } catch (error) {
-                console.error('Search error:', error);
-                showStatus('Error connecting to server');
+            if (books.length === 0) {
+                showStatus('No books found');
+                document.getElementById('results').innerHTML = '';
+                return;
             }
+            
+            hideStatus();
+            displayResults(books);
+            
+        } catch (error) {
+            console.error('Search error:', error);
+            showStatus('Error connecting to server');
         }
-        
-        function displayResults(books) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `
-                <h2 class="text-xl font-semibold mb-4">Search Results</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
-                    ${books.map((book, index) => `
-                        <div class="group cursor-pointer" data-book-index="${index}">
-                            <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card" onclick="toggleRequestButton(event, ${index})">
-                                ${book.image && book.image.url ? `
-                                    <img src="${book.image.url}" alt="${book.title}" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-black bg-opacity-0 md:group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center request-overlay" data-card-index="${index}">
+    }
+    
+    function displayResults(books) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = `
+            <h2 class="text-xl font-semibold mb-4">Search Results</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+                ${books.map((book, index) => `
+                    <div class="group cursor-pointer" data-book-index="${index}">
+                        <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1a1f2e] border border-gray-800 mb-2 book-card" onclick="toggleRequestButton(event, ${index})">
+                            ${book.image && book.image.url ? `
+                                <img src="${book.image.url}" alt="${book.title}" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-black bg-opacity-0 md:group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center request-overlay" data-card-index="${index}">
+                                    <div class="flex flex-col gap-2">
+                                        <button onclick='showBookDetails(event, ${index})' 
+                                                class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium flex items-center gap-2 text-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            More Info
+                                        </button>
                                         <button onclick='requestBook(event, ${index})' 
                                                 class="opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2 text-sm request-btn">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,98 +171,173 @@
                                             Request
                                         </button>
                                     </div>
-                                ` : `
-                                    <div class="w-full h-full flex items-center justify-center text-gray-600">
-                                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                    </div>
-                                `}
-                            </div>
-                            <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
-                            <p class="text-xs text-gray-400 line-clamp-1">
-                                ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
-                            </p>
-                            ${book.release_year ? `<p class="text-xs text-gray-500">${book.release_year}</p>` : ''}
+                                </div>
+                            ` : `
+                                <div class="w-full h-full flex items-center justify-center text-gray-600">
+                                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    </svg>
+                                </div>
+                            `}
                         </div>
-                    `).join('')}
-                </div>
-            `;
-            
-            // Store books in a global variable for access by requestBook
-            window.currentBooks = books;
-        }
+                        <h3 class="font-medium text-sm line-clamp-2 mb-1">${book.title}</h3>
+                        <p class="text-xs text-gray-400 line-clamp-1">
+                            ${book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author')}
+                        </p>
+                        ${book.release_year ? `<p class="text-xs text-gray-500">${book.release_year}</p>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
         
-        function toggleRequestButton(event, index) {
-            // Only handle on mobile/tablet (not on desktop hover)
-            if (window.innerWidth >= 768) return; // md breakpoint
+        // Store books in a global variable for access by requestBook
+        window.currentBooks = books;
+    }
+    
+    function showBookDetails(event, index) {
+        event.stopPropagation();
+        const book = window.currentBooks[index];
+        const author = book.author_names && book.author_names[0] ? book.author_names[0] : (book.contributions && book.contributions[0] && book.contributions[0].author ? book.contributions[0].author.name : 'Unknown Author');
+        
+        const modal = document.getElementById('bookModal');
+        const modalContent = document.getElementById('modalContent');
+        
+        modalContent.innerHTML = `
+            <div class="p-6">
+                <div class="flex gap-6 mb-6">
+                    ${book.image && book.image.url ? `
+                        <img src="${book.image.url}" alt="${book.title}" class="w-48 h-72 object-cover rounded-lg border border-gray-800">
+                    ` : ''}
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-bold mb-2">${book.title}</h2>
+                        <p class="text-lg text-gray-300 mb-2">${author}</p>
+                        ${book.release_year ? `<p class="text-gray-400 mb-2">${book.release_year}</p>` : ''}
+                        ${book.rating ? `
+                            <div class="flex items-center gap-2 mb-2">
+                                <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <span class="text-gray-300">${book.rating.toFixed(2)} / 5</span>
+                            </div>
+                        ` : ''}
+                        ${book.isbn_13 || book.isbn_10 ? `<p class="text-sm text-gray-400 mb-4">ISBN: ${book.isbn_13 || book.isbn_10}</p>` : ''}
+                        ${book.pages ? `<p class="text-sm text-gray-400 mb-4">${book.pages} pages</p>` : ''}
+                        
+                        <div class="flex gap-3 mt-4">
+                            <button onclick='requestBook(event, ${index}); closeModal();' 
+                                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4" />
+                                </svg>
+                                Request
+                            </button>
+                            ${book.slug ? `
+                            <a href="https://hardcover.app/books/${book.slug}" target="_blank" rel="noopener noreferrer"
+                               class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                View on Hardcover
+                            </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                ${book.description ? `
+                    <div class="border-t border-gray-800 pt-4">
+                        <h3 class="text-lg font-semibold mb-2">Description</h3>
+                        <p class="text-gray-300 leading-relaxed">${book.description}</p>
+                    </div>
+                ` : ''}
+                
+                <button onclick="closeModal()" class="mt-6 w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium">
+                    Close
+                </button>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+    }
+    
+    function closeModal(event) {
+        if (!event || event.target.id === 'bookModal') {
+            document.getElementById('bookModal').classList.add('hidden');
+        }
+    }
+    
+    function toggleRequestButton(event, index) {
+        // Only handle on mobile/tablet (not on desktop hover)
+        if (window.innerWidth >= 768) return; // md breakpoint
+        
+        event.stopPropagation();
+        
+        // Close all other open overlays
+        document.querySelectorAll('.request-overlay').forEach(overlay => {
+            if (overlay.dataset.cardIndex !== index.toString()) {
+                overlay.classList.remove('show-mobile');
+                overlay.querySelectorAll('button').forEach(btn => btn.classList.remove('opacity-100'));
+            }
+        });
+        
+        // Toggle this overlay
+        const overlay = event.currentTarget.querySelector('.request-overlay');
+        const buttons = overlay.querySelectorAll('button');
+        
+        if (overlay.classList.contains('show-mobile')) {
+            overlay.classList.remove('show-mobile');
+            buttons.forEach(btn => btn.classList.remove('opacity-100'));
+        } else {
+            overlay.classList.add('show-mobile');
+            buttons.forEach(btn => btn.classList.add('opacity-100'));
+        }
+    }
+    
+    function requestBook(event, index) {
+        event.stopPropagation();
+        const book = window.currentBooks[index];
+        downloadBook(book);
+    }
+    
+    async function downloadBook(book) {
+        console.log('Requesting book:', book);
+        showStatus('Sending to Prowlarr...');
+        
+        try {
+            const author = book.author_names && book.author_names[0] ? 
+                book.author_names[0] : 
+                (book.contributions && book.contributions[0] && book.contributions[0].author ? 
+                    book.contributions[0].author.name : 'Unknown');
             
-            event.stopPropagation();
+            const payload = {
+                title: book.title,
+                author: author,
+                isbn: book.isbn_13 || book.isbn_10,
+                year: book.release_year
+            };
             
-            // Close all other open overlays
-            document.querySelectorAll('.request-overlay').forEach(overlay => {
-                if (overlay.dataset.cardIndex !== index.toString()) {
-                    overlay.classList.remove('show-mobile');
-                    overlay.querySelector('.request-btn').classList.remove('opacity-100');
-                }
+            console.log('Sending payload:', payload);
+            
+            const response = await fetch('/api/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
             
-            // Toggle this overlay
-            const overlay = event.currentTarget.querySelector('.request-overlay');
-            const btn = overlay.querySelector('.request-btn');
+            const result = await response.json();
             
-            if (overlay.classList.contains('show-mobile')) {
-                overlay.classList.remove('show-mobile');
-                btn.classList.remove('opacity-100');
+            if (result.success) {
+                showStatus('✓ Book requested! Download should start shortly.');
             } else {
-                overlay.classList.add('show-mobile');
-                btn.classList.add('opacity-100');
+                showStatus('Error: ' + result.error);
             }
+        } catch (error) {
+            console.error('Download error:', error);
+            showStatus('Error connecting to server');
         }
-        
-        function requestBook(event, index) {
-            event.stopPropagation();
-            const book = window.currentBooks[index];
-            downloadBook(book);
-        }
-        
-        async function downloadBook(book) {
-            console.log('Requesting book:', book); // Debug log
-            showStatus('Sending to Prowlarr...');
-            
-            try {
-                const author = book.author_names && book.author_names[0] ? 
-                    book.author_names[0] : 
-                    (book.contributions && book.contributions[0] && book.contributions[0].author ? 
-                        book.contributions[0].author.name : 'Unknown');
-                
-                const payload = {
-                    title: book.title,
-                    author: author,
-                    isbn: book.isbn_13 || book.isbn_10,
-                    year: book.release_year
-                };
-                
-                console.log('Sending payload:', payload); // Debug log
-                
-                const response = await fetch('/api/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showStatus('✓ Book requested! Download should start shortly.');
-                } else {
-                    showStatus('Error: ' + result.error);
-                }
-            } catch (error) {
-                console.error('Download error:', error);
-                showStatus('Error connecting to server');
-            }
-        }
-    </script>
+    }
+</script>
+```
+
 </body>
 </html>
