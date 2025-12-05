@@ -458,6 +458,8 @@ async function listCalibreLibrary() {
 
   try {
     console.log('\n📚 Fetching Calibre library contents...');
+    console.log(`   URL: ${CONFIG.calibre.url}/ajax/books`);
+    console.log(`   Auth: ${CONFIG.calibre.username ? 'Using username/password' : 'No auth'}`);
     
     const auth = CONFIG.calibre.username && CONFIG.calibre.password 
       ? { username: CONFIG.calibre.username, password: CONFIG.calibre.password }
@@ -472,6 +474,14 @@ async function listCalibreLibrary() {
       timeout: 10000
     });
 
+    console.log(`   Response status: ${response.status}`);
+    console.log(`   Response data type: ${typeof response.data}`);
+    console.log(`   Response keys: ${response.data ? Object.keys(response.data).join(', ') : 'none'}`);
+    
+    if (response.data) {
+      console.log(`   Full response: ${JSON.stringify(response.data).substring(0, 500)}...`);
+    }
+
     if (response.data && response.data.total_num > 0) {
       console.log(`\n✓ Found ${response.data.total_num} books in Calibre library:\n`);
       
@@ -485,13 +495,25 @@ async function listCalibreLibrary() {
       console.log(`\nTotal: ${response.data.total_num} books\n`);
     } else {
       console.log('⚠️  Calibre library appears to be empty or not accessible');
+      console.log('   This could mean:');
+      console.log('   1. Wrong URL (should be Calibre-Web, not content server)');
+      console.log('   2. Authentication required but not provided');
+      console.log('   3. API endpoint is different for your version');
+      console.log('\n   Try accessing this URL in your browser:');
+      console.log(`   ${CONFIG.calibre.url}/ajax/books?num=10`);
     }
   } catch (error) {
-    console.error('Failed to list Calibre library:', error.message);
+    console.error('\n❌ Failed to list Calibre library');
+    console.error(`   Error: ${error.message}`);
     if (error.response) {
-      console.error('  Status:', error.response.status);
-      console.error('  URL:', error.config?.url);
+      console.error(`   Status: ${error.response.status}`);
+      console.error(`   Status text: ${error.response.statusText}`);
+      console.error(`   URL: ${error.config?.url}`);
+      console.error(`   Response data: ${JSON.stringify(error.response.data).substring(0, 300)}`);
     }
+    console.log('\n   Try these URLs in your browser to test:');
+    console.log(`   1. ${CONFIG.calibre.url}`);
+    console.log(`   2. ${CONFIG.calibre.url}/ajax/books?num=10`);
   }
 }
 
@@ -681,7 +703,8 @@ app.post('/api/download', async (req, res) => {
 
     console.log(`Download URL: ${downloadUrl.substring(0, 50)}...`);
 
-    const added = await addTorrentToQBittorrent(downloadUrl, bestResult.title);
+    // Always download through Prowlarr to get proper passkey
+    const added = await addTorrentToQBittorrent(downloadUrl, bestResult.title, true);
 
     if (!added) {
       return res.json({ success: false, error: 'Failed to add torrent to qBittorrent' });
