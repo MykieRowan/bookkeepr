@@ -103,6 +103,15 @@ async function addTorrentToQBittorrent(downloadUrl, title, viaProwlarr = false) 
         });
         
         console.log(`  Got torrent file, size: ${torrentResponse.data.length} bytes`);
+        console.log(`  Content-Type: ${torrentResponse.headers['content-type']}`);
+        
+        // Check if it's actually a torrent file
+        const firstBytes = Buffer.from(torrentResponse.data).toString('utf8', 0, 20);
+        console.log(`  First bytes: ${firstBytes.substring(0, 20)}`);
+        
+        if (!firstBytes.startsWith('d8:announce')) {
+          console.error(`  WARNING: This doesn't look like a valid torrent file!`);
+        }
         
         // Send the actual torrent file to qBittorrent
         form.append('torrents', Buffer.from(torrentResponse.data), {
