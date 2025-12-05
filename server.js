@@ -18,6 +18,9 @@ const CONFIG = {
   hardcover: {
     apiKey: process.env.HARDCOVER_API_KEY || 'YOUR_HARDCOVER_API_KEY'
   },
+  mam: {
+    id: process.env.MAM_ID || null
+  },
   prowlarr: {
     url: process.env.PROWLARR_URL || 'http://localhost:9696',
     apiKey: process.env.PROWLARR_API_KEY || 'YOUR_PROWLARR_API_KEY'
@@ -31,6 +34,98 @@ const CONFIG = {
     ingestFolder: process.env.CALIBRE_INGEST_FOLDER || '/calibre/ingest'
   }
 };
+
+// Search MyAnonaMouse directly
+async function searchMAM(title) {
+  if (!CONFIG.mam.id) {
+    console.log('MAM not configured, skipping MAM search');
+    return null;
+  }
+
+  try {
+    console.log(`Searching MAM for: ${title}`);
+
+    const response = await axios.post(
+      'https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php',
+      {
+        tor: {
+          text: title,
+          srchIn: ['title'],
+          searchType: 'all',
+          searchIn: 'torrents',
+          cat: ['0'],
+          main_cat: [14], // E-Books only
+          sortType: 'default',
+          startNumber: '0'
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': `mam_id=${CONFIG.mam.id}`
+        },
+        timeout: 10000
+      }
+    );
+
+    if (response.data && response.data.data && response.data.data.length > 0) {
+      console.log(`MAM found ${response.data.data.length} results`);
+      return response.data.data[0]; // Return best result
+    }
+
+    console.log('No results from MAM');
+    return null;
+  } catch (error) {
+    console.error('MAM search error:', error.message);
+    return null;
+  }
+}
+
+// Download torrent from MAM directly to qBitTorrent
+async function downloadFromMAM(mamResult) {
+  try {
+    console.log(`Downloading MAM torrent: ${mamResult.title}`);
+    
+    // Get the torrent file from MAM
+    const torrentUrl = `https://www.myanonamouse.net/tor/download.php/${mamResult.dl}`;
+    
+    const torrentResponse = await axios.get(torrentUrl, {
+      headers: {
+        'Cookie': `mam_id=${CONFIG.mam.id}`
+      },
+      responseType: 'arraybuffer',
+      timeout: 10000
+    });
+
+    // Send torrent to qBitTorrent
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('torrents', Buffer.from(torrentResponse.data), {
+      filename: `${mamResult.id}.torrent`,
+      contentType: 'application/x-bittorrent'
+    });
+
+    await axios.post(
+      `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
+      form,
+      {
+        headers: {
+          ...form.getHeaders()
+        },
+        auth: {
+          username: CONFIG.qbittorrent.username,
+          password: CONFIG.qbittorrent.password
+        },
+        timeout: 10000
+      }
+    );
+
+    return true;
+  } catch (error) {
+    console.error('MAM download error:', error.message);
+    return false;
+  }
+}
 
 // Search Prowlarr for a book
 async function searchProwlarr(title, author, isbn) {
@@ -98,7 +193,7 @@ async function downloadFromProwlarr(indexerId, guid) {
 // Proxy Hardcover search through backend
 app.post('/api/search', async (req, res) => {
   try {
-    const { query, searchType = 'title' } = req.body;
+    const { query } = req.body;
 
     if (!query) {
       return res.status(400).json({ 
@@ -107,95 +202,44 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    console.log(`Searching Hardcover for: ${query} (type: ${searchType})`);
+    console.log(`Searching Hardcover for: ${query}`);
 
-    let responseData;
-
-    if (searchType === 'isbn') {
-      // Direct ISBN query
-      const response = await axios.post(
-        'https://api.hardcover.app/v1/graphql',
-        {
-          query: `
-            query SearchByISBN($isbn: String!) {
-              books(where: {_or: [{isbn_10: {_eq: $isbn}}, {isbn_13: {_eq: $isbn}}]}, limit: 20) {
-                id
-                title
-                description
-                image
-                release_year
-                pages
-                isbn_10
-                isbn_13
-                rating
-                slug
-                contributions {
-                  author {
-                    name
-                  }
-                }
-              }
+    const response = await axios.post(
+      'https://api.hardcover.app/v1/graphql',
+      {
+        query: `
+          query SearchBooks($query: String!) {
+            search(query: $query, query_type: "Book", per_page: 20) {
+              results
             }
-          `,
-          variables: { isbn: query }
+          }
+        `,
+        variables: { query: query }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
-          },
-          timeout: 10000
-        }
-      );
-      
-      if (response.data.errors) {
-        console.error('GraphQL errors:', response.data.errors);
-        return res.status(500).json({
-          success: false,
-          error: 'Hardcover API error'
-        });
+        timeout: 10000
       }
-      
-      responseData = response.data.data?.books || [];
-    } else {
-      // Search API for title/author
-      const response = await axios.post(
-        'https://api.hardcover.app/v1/graphql',
-        {
-          query: `
-            query SearchBooks($query: String!) {
-              search(query: $query, query_type: "Book", per_page: 20) {
-                results
-              }
-            }
-          `,
-          variables: { query: query }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${CONFIG.hardcover.apiKey}`
-          },
-          timeout: 10000
-        }
-      );
+    );
 
-      if (response.data.errors) {
-        console.error('GraphQL errors:', response.data.errors);
-        return res.status(500).json({
-          success: false,
-          error: 'Hardcover API error'
-        });
-      }
-
-      const searchResults = response.data.data?.search?.results || {};
-      const hits = searchResults.hits || [];
-      responseData = hits.map(hit => hit.document);
+    if (response.data.errors) {
+      console.error('GraphQL errors:', response.data.errors);
+      return res.status(500).json({
+        success: false,
+        error: 'Hardcover API error'
+      });
     }
+
+    const searchResults = response.data.data?.search?.results || {};
+    const hits = searchResults.hits || [];
+    const books = hits.map(hit => hit.document);
 
     res.json({
       success: true,
-      books: responseData
+      books: books
     });
 
   } catch (error) {
@@ -224,7 +268,32 @@ app.post('/api/download', async (req, res) => {
     console.log(`ISBN: ${isbn}`);
     console.log(`Year: ${year}`);
 
-    // Search Prowlarr
+    // Try MAM first if configured
+    if (CONFIG.mam.id) {
+      console.log('Trying MAM direct search...');
+      const mamResult = await searchMAM(title);
+      
+      if (mamResult) {
+        const downloaded = await downloadFromMAM(mamResult);
+        
+        if (downloaded) {
+          return res.json({
+            success: true,
+            message: 'Download started via MAM',
+            source: 'mam',
+            details: {
+              title: mamResult.title,
+              size: mamResult.size,
+              seeders: mamResult.seeders
+            }
+          });
+        }
+      }
+      
+      console.log('MAM search failed or no results, falling back to Prowlarr...');
+    }
+
+    // Fall back to Prowlarr
     const results = await searchProwlarr(title, author, isbn);
 
     if (!results || results.length === 0) {
@@ -278,7 +347,8 @@ app.post('/api/download', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Download started',
+      message: 'Download started via Prowlarr',
+      source: 'prowlarr',
       details: {
         title: bestResult.title,
         size: `${(bestResult.size / 1024 / 1024).toFixed(2)} MB`,
