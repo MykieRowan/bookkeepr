@@ -105,8 +105,25 @@ async function addTorrentToQBittorrent(downloadUrl, title, viaProwlarr = false) 
         console.log(`  Got torrent file, size: ${torrentResponse.data.length} bytes`);
         console.log(`  Content-Type: ${torrentResponse.headers['content-type']}`);
         
-        // Check if it's actually a torrent file
-        const firstBytes = Buffer.from(torrentResponse.data).toString('utf8', 0, 20);
+        // Check if it's actually a torrent file and extract announce URL
+        const torrentBuffer = Buffer.from(torrentResponse.data);
+        const torrentString = torrentBuffer.toString('utf8', 0, Math.min(500, torrentBuffer.length));
+        const announceMatch = torrentString.match(/8:announce(\d+):(.+?)(?:d|i|l)/);
+        
+        if (announceMatch) {
+          const announceLength = parseInt(announceMatch[1]);
+          const announceUrl = announceMatch[2].substring(0, announceLength);
+          console.log(`  Announce URL: ${announceUrl}`);
+          
+          // Check if it has a passkey
+          if (announceUrl.includes('passkey=') || announceUrl.includes('authkey=') || announceUrl.includes('torrent_pass=')) {
+            console.log(`  ✓ Passkey found in announce URL`);
+          } else {
+            console.log(`  ⚠️  WARNING: No passkey found in announce URL!`);
+          }
+        }
+        
+        const firstBytes = torrentBuffer.toString('utf8', 0, 20);
         console.log(`  First bytes: ${firstBytes.substring(0, 20)}`);
         
         if (!firstBytes.startsWith('d8:announce')) {
