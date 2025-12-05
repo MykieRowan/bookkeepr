@@ -18,9 +18,6 @@ const CONFIG = {
   hardcover: {
     apiKey: process.env.HARDCOVER_API_KEY || 'YOUR_HARDCOVER_API_KEY'
   },
-  mam: {
-    id: process.env.MAM_ID || null
-  },
   prowlarr: {
     url: process.env.PROWLARR_URL || 'http://localhost:9696',
     apiKey: process.env.PROWLARR_API_KEY || 'YOUR_PROWLARR_API_KEY'
@@ -34,194 +31,6 @@ const CONFIG = {
     ingestFolder: process.env.CALIBRE_INGEST_FOLDER || '/calibre/ingest'
   }
 };
-
-// qBittorrent session cookie storage
-let qbitCookie = null;
-
-// Login to qBittorrent and get session cookie
-async function loginToQBittorrent() {
-  try {
-    console.log('Logging into qBittorrent...');
-    const FormData = require('form-data');
-    const form = new FormData();
-    form.append('username', CONFIG.qbittorrent.username);
-    form.append('password', CONFIG.qbittorrent.password);
-
-    const response = await axios.post(
-      `${CONFIG.qbittorrent.url}/api/v2/auth/login`,
-      form,
-      {
-        headers: form.getHeaders(),
-        maxRedirects: 0,
-        validateStatus: (status) => status === 200
-      }
-    );
-
-    // Extract cookie from response
-    const cookies = response.headers['set-cookie'];
-    if (cookies && cookies.length > 0) {
-      qbitCookie = cookies[0].split(';')[0];
-      console.log('✓ qBittorrent login successful');
-      return true;
-    }
-
-    console.log('✓ qBittorrent login successful (no cookie needed)');
-    return true;
-  } catch (error) {
-    console.error('qBittorrent login error:', error.message);
-    return false;
-  }
-}
-
-// Add torrent to qBittorrent by URL
-async function addTorrentToQBittorrent(downloadUrl, title) {
-  try {
-    // Ensure we're logged in
-    if (!qbitCookie) {
-      await loginToQBittorrent();
-    }
-
-    console.log(`Adding torrent to qBittorrent: ${title}`);
-    
-    const FormData = require('form-data');
-    const form = new FormData();
-    form.append('urls', downloadUrl);
-    form.append('savepath', CONFIG.calibre.ingestFolder);
-
-    const headers = {
-      ...form.getHeaders()
-    };
-    
-    if (qbitCookie) {
-      headers['Cookie'] = qbitCookie;
-    }
-
-    const response = await axios.post(
-      `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
-      form,
-      {
-        headers: headers,
-        timeout: 10000
-      }
-    );
-
-    console.log('✓ Torrent added to qBittorrent');
-    return true;
-  } catch (error) {
-    console.error('qBittorrent add torrent error:', error.message);
-    
-    // If we got a 403, try logging in again
-    if (error.response && error.response.status === 403) {
-      console.log('Session expired, trying to re-login...');
-      qbitCookie = null;
-      await loginToQBittorrent();
-      return addTorrentToQBittorrent(downloadUrl, title); // Retry once
-    }
-    
-    return false;
-  }
-}
-
-// Search MyAnonaMouse directly
-async function searchMAM(title) {
-  if (!CONFIG.mam.id) {
-    console.log('MAM not configured, skipping MAM search');
-    return null;
-  }
-
-  try {
-    console.log(`Searching MAM for: ${title}`);
-
-    const response = await axios.post(
-      'https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php',
-      {
-        tor: {
-          text: title,
-          srchIn: ['title'],
-          searchType: 'all',
-          searchIn: 'torrents',
-          cat: ['0'],
-          main_cat: [14], // E-Books only
-          sortType: 'default',
-          startNumber: '0'
-        }
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `mam_id=${CONFIG.mam.id}`
-        },
-        timeout: 10000
-      }
-    );
-
-    if (response.data && response.data.data && response.data.data.length > 0) {
-      console.log(`MAM found ${response.data.data.length} results`);
-      return response.data.data[0]; // Return best result
-    }
-
-    console.log('No results from MAM');
-    return null;
-  } catch (error) {
-    console.error('MAM search error:', error.message);
-    return null;
-  }
-}
-
-// Download torrent from MAM directly to qBitTorrent
-async function downloadFromMAM(mamResult) {
-  try {
-    console.log(`Downloading MAM torrent: ${mamResult.title}`);
-    
-    // Get the torrent file from MAM
-    const torrentUrl = `https://www.myanonamouse.net/tor/download.php/${mamResult.dl}`;
-    
-    const torrentResponse = await axios.get(torrentUrl, {
-      headers: {
-        'Cookie': `mam_id=${CONFIG.mam.id}`
-      },
-      responseType: 'arraybuffer',
-      timeout: 10000
-    });
-
-    // Ensure we're logged in to qBittorrent
-    if (!qbitCookie) {
-      await loginToQBittorrent();
-    }
-
-    // Send torrent to qBitTorrent
-    const FormData = require('form-data');
-    const form = new FormData();
-    form.append('torrents', Buffer.from(torrentResponse.data), {
-      filename: `${mamResult.id}.torrent`,
-      contentType: 'application/x-bittorrent'
-    });
-    form.append('savepath', CONFIG.calibre.ingestFolder);
-
-    const headers = {
-      ...form.getHeaders()
-    };
-    
-    if (qbitCookie) {
-      headers['Cookie'] = qbitCookie;
-    }
-
-    await axios.post(
-      `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
-      form,
-      {
-        headers: headers,
-        timeout: 10000
-      }
-    );
-
-    console.log('✓ MAM torrent added to qBittorrent');
-    return true;
-  } catch (error) {
-    console.error('MAM download error:', error.message);
-    return false;
-  }
-}
 
 // Search Prowlarr for a book
 async function searchProwlarr(title, author, isbn) {
@@ -253,6 +62,33 @@ async function searchProwlarr(title, author, isbn) {
       console.error('Response status:', error.response.status);
       console.error('Response data:', error.response.data);
     }
+    throw error;
+  }
+}
+
+// Download from Prowlarr
+async function downloadFromProwlarr(indexerId, guid) {
+  try {
+    console.log(`Grabbing release from indexer ${indexerId}`);
+
+    const response = await axios.post(
+      `${CONFIG.prowlarr.url}/api/v1/search`,
+      {
+        guid: guid,
+        indexerId: indexerId
+      },
+      {
+        headers: {
+          'X-Api-Key': CONFIG.prowlarr.apiKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Prowlarr download error:', error.message);
     throw error;
   }
 }
@@ -298,13 +134,30 @@ app.post('/api/search', async (req, res) => {
       console.error('GraphQL errors:', response.data.errors);
       return res.status(500).json({
         success: false,
-        error: 'Hardcover API error'
+        error: 'Hardcover API error - check your API key'
       });
     }
 
+    // The results contain a Typesense response with hits
     const searchResults = response.data.data?.search?.results || {};
     const hits = searchResults.hits || [];
-    const books = hits.map(hit => hit.document);
+    
+    // Extract the book documents from the hits and map to expected frontend format
+    const books = hits.map(hit => ({
+      id: hit.document.id,
+      title: hit.document.title,
+      // Don't include subtitle - keep it simple
+      description: hit.document.description,
+      image: hit.document.image,
+      release_year: hit.document.release_year,
+      pages: hit.document.pages,
+      isbn_10: hit.document.isbns?.[1], // Second ISBN if available
+      isbn_13: hit.document.isbns?.[0], // First ISBN if available
+      contributions: hit.document.contributions?.map(contrib => ({
+        author: contrib.author
+      })),
+      author_names: hit.document.author_names
+    }));
 
     res.json({
       success: true,
@@ -337,32 +190,7 @@ app.post('/api/download', async (req, res) => {
     console.log(`ISBN: ${isbn}`);
     console.log(`Year: ${year}`);
 
-    // Try MAM first if configured
-    if (CONFIG.mam.id) {
-      console.log('Trying MAM direct search...');
-      const mamResult = await searchMAM(title);
-      
-      if (mamResult) {
-        const downloaded = await downloadFromMAM(mamResult);
-        
-        if (downloaded) {
-          return res.json({
-            success: true,
-            message: 'Download started via MAM',
-            source: 'mam',
-            details: {
-              title: mamResult.title,
-              size: mamResult.size,
-              seeders: mamResult.seeders
-            }
-          });
-        }
-      }
-      
-      console.log('MAM search failed or no results, falling back to Prowlarr...');
-    }
-
-    // Fall back to Prowlarr
+    // Search Prowlarr
     const results = await searchProwlarr(title, author, isbn);
 
     if (!results || results.length === 0) {
@@ -411,34 +239,12 @@ app.post('/api/download', async (req, res) => {
     console.log(`  Seeders: ${bestResult.seeders || '?'}`);
     console.log(`  Indexer: ${bestResult.indexer}`);
 
-    // Extract download URL from the result
-    // Prowlarr search results include either downloadUrl or magnetUrl
-    const downloadUrl = bestResult.downloadUrl || bestResult.magnetUrl;
-    
-    if (!downloadUrl) {
-      console.error('No download URL found in result');
-      return res.json({
-        success: false,
-        error: 'No download link available for this result'
-      });
-    }
-
-    console.log(`Download URL: ${downloadUrl.substring(0, 50)}...`);
-
-    // Add torrent directly to qBittorrent
-    const added = await addTorrentToQBittorrent(downloadUrl, bestResult.title);
-
-    if (!added) {
-      return res.json({
-        success: false,
-        error: 'Failed to add torrent to qBittorrent'
-      });
-    }
+    // Grab the release
+    await downloadFromProwlarr(bestResult.indexerId, bestResult.guid);
 
     res.json({
       success: true,
-      message: 'Download started successfully',
-      source: 'prowlarr',
+      message: 'Download started',
       details: {
         title: bestResult.title,
         size: `${(bestResult.size / 1024 / 1024).toFixed(2)} MB`,
@@ -484,7 +290,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   qBitTorrent: ${CONFIG.qbittorrent.url}`);
   console.log(`   Calibre: ${CONFIG.calibre.ingestFolder}`);
   console.log(`\n📝 Make sure to set environment variables in docker-compose.yml!`);
-  
-  // Login to qBittorrent on startup
-  loginToQBittorrent();
 });
