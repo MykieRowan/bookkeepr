@@ -751,35 +751,9 @@ console.log(`Selected: ${bestResult.title}`);
 console.log(`  Size: ${(bestResult.size / 1024 / 1024).toFixed(2)} MB`);
 console.log(`  Seeders: ${bestResult.seeders || '?'}`);
 console.log(`  Indexer: ${bestResult.indexer}`);
-console.log(`  GUID: ${bestResult.guid}`);
 
 console.log(`\nDEBUG - Full result:`, JSON.stringify(bestResult, null, 2));
 
-// Use Prowlarr's indexer ID and GUID to grab the torrent properly
-console.log(`\nTriggering Prowlarr download...`);
-console.log(`  Indexer ID: ${bestResult.indexerId}`);
-console.log(`  GUID: ${bestResult.guid}`);
-
-try {
-  // Tell Prowlarr to grab this release - this ensures proper authentication
-  const grabResponse = await axios.post(
-    `${CONFIG.prowlarr.url}/api/v1/search`,
-    {
-      guid: bestResult.guid,
-      indexerId: bestResult.indexerId
-    },
-    {
-      headers: { 'X-Api-Key': CONFIG.prowlarr.apiKey },
-      timeout: 15000
-    }
-  );
-  
-  console.log(`  Prowlarr grab response: ${grabResponse.status}`);
-} catch (grabError) {
-  console.error(`  Prowlarr grab failed: ${grabError.message}`);
-}
-
-// Now download the torrent file through Prowlarr's download endpoint
 const downloadUrl = bestResult.downloadUrl || bestResult.magnetUrl;
 
 if (!downloadUrl) {
