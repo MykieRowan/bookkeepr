@@ -754,33 +754,59 @@ console.log(`  Indexer: ${bestResult.indexer}`);
 
 console.log(`\nDEBUG - Full result:`, JSON.stringify(bestResult, null, 2));
 
-const downloadUrl = bestResult.downloadUrl || bestResult.magnetUrl;
+// Tell Prowlarr to grab this release and send it to qBittorrent
+// Since qBittorrent is already configured in Prowlarr, this should work
+console.log(`\nTelling Prowlarr to grab release...`);
+console.log(`  GUID: ${bestResult.guid}`);
+console.log(`  Indexer ID: ${bestResult.indexerId}`);
 
-if (!downloadUrl) {
-  console.error('No download URL found in result');
-  return res.json({ success: false, error: 'No download link available' });
-}
-
-console.log(`Download URL: ${downloadUrl.substring(0, 50)}...`);
-
-// Always download through Prowlarr to get proper passkey
-const added = await addTorrentToQBittorrent(downloadUrl, bestResult.title, true);
-
-if (!added) {
-  return res.json({ success: false, error: 'Failed to add torrent to qBittorrent' });
-}
-
-res.json({
-  success: true,
-  message: 'Download started successfully',
-  source: 'prowlarr',
-  details: {
-    title: bestResult.title,
-    size: `${(bestResult.size / 1024 / 1024).toFixed(2)} MB`,
-    indexer: bestResult.indexer,
-    seeders: bestResult.seeders
+try {
+  // Use the download endpoint to trigger Prowlarr's download client integration
+  const grabPayload = {
+    guid: bestResult.guid,
+    indexerId: bestResult.indexerId
+  };
+  
+  console.log(`  Payload:`, JSON.stringify(grabPayload));
+  
+  const grabResponse = await axios.post(
+    `${CONFIG.prowlarr.url}/api/v1/search`,
+    grabPayload,
+    {
+      headers: { 
+        'X-Api-Key': CONFIG.prowlarr.apiKey,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    }
+  );
+  
+  console.log(`  Prowlarr response status: ${grabResponse.status}`);
+  console.log(`  Prowlarr sent to qBittorrent successfully`);
+  
+  return res.json({
+    success: true,
+    message: 'Download started via Prowlarr → qBittorrent',
+    source: 'prowlarr',
+    details: {
+      title: bestResult.title,
+      size: `${(bestResult.size / 1024 / 1024).toFixed(2)} MB`,
+      indexer: bestResult.indexer,
+      seeders: bestResult.seeders
+    }
+  });
+} catch (grabError) {
+  console.error(`  Prowlarr grab failed: ${grabError.message}`);
+  if (grabError.response) {
+    console.error(`  Status: ${grabError.response.status}`);
+    console.error(`  Data:`, JSON.stringify(grabError.response.data));
   }
-});
+  
+  return res.json({ 
+    success: false, 
+    error: `Prowlarr grab failed: ${grabError.message}` 
+  });
+}
 ```
 
 } catch (error) {
