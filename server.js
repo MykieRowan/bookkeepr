@@ -32,7 +32,7 @@ const CONFIG = {
   },
   calibre: {
     ingestFolder: process.env.CALIBRE_INGEST_FOLDER || '/calibre/ingest',
-    url: process.env.CALIBRE_URL || null,
+    url: process.env.CALIBRE_URL && process.env.CALIBRE_URL !== 'disabled' ? process.env.CALIBRE_URL : null,
     username: process.env.CALIBRE_USERNAME || null,
     password: process.env.CALIBRE_PASSWORD || null
   }
@@ -321,20 +321,22 @@ async function checkCalibreForBook(title, author, isbn) {
     // Try ISBN search first (most accurate)
     if (isbn) {
       try {
-        console.log(`Checking Calibre-Web for ISBN: ${isbn}`);
+        console.log(`Checking Calibre for ISBN: ${isbn}`);
         
-        const response = await axios.get(`${CONFIG.calibre.url}/ajax/search`, {
-          params: { query: `identifiers:${isbn}` },
+        const response = await axios.get(`${CONFIG.calibre.url}/ajax/books`, {
+          params: { 
+            search: `identifiers:=${isbn}`,
+            num: 10
+          },
           auth,
           timeout: 5000
         });
 
-        if (response.data && response.data.book_ids && response.data.book_ids.length > 0) {
-          console.log(`✓ Book found by ISBN in Calibre (${response.data.book_ids.length} matches)`);
+        if (response.data && response.data.total_num > 0) {
+          console.log(`✓ Found by ISBN: ${response.data.total_num} matches`);
           return { 
             inLibrary: true, 
-            bookIds: response.data.book_ids,
-            count: response.data.book_ids.length
+            count: response.data.total_num
           };
         }
       } catch (isbnError) {
@@ -342,26 +344,96 @@ async function checkCalibreForBook(title, author, isbn) {
       }
     }
 
-    // Fall back to title search
+    // Try exact title match
     if (title) {
-      console.log(`Checking Calibre-Web for title: ${title}`);
+      console.log(`Checking Calibre for exact title: ${title}`);
       
-      // Clean the title for better searching
-      const cleanTitle = title.replace(/[:\(\)\[\]]/g, '').trim();
-      
-      const response = await axios.get(`${CONFIG.calibre.url}/ajax/search`, {
-        params: { query: cleanTitle },
-        auth,
-        timeout: 5000
-      });
+      try {
+        const response = await axios.get(`${CONFIG.calibre.url}/ajax/books`, {
+          params: { 
+            search: `title:"=${title}"`,
+            num: 10
+          },
+          auth,
+          timeout: 5000
+        });
 
-      if (response.data && response.data.book_ids && response.data.book_ids.length > 0) {
-        console.log(`✓ Book found by title in Calibre (${response.data.book_ids.length} matches)`);
-        return { 
-          inLibrary: true, 
-          bookIds: response.data.book_ids,
-          count: response.data.book_ids.length
-        };
+        if (response.data && response.data.total_num > 0) {
+          console.log(`✓ Found by exact title: ${response.data.total_num} matches`);
+          return { 
+            inLibrary: true,
+            count: response.data.total_num
+          };
+        }
+      } catch (exactError) {
+        console.log(`Exact title search failed: ${exactError.message}`);
+      }
+    }
+
+    // Try fuzzy title match (most generous)
+    if (title) {
+      // Remove special characters and extra spaces
+      const cleanTitle = title
+        .replace(/[:\(\)\[\]—–\-""'']/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      console.log(`Checking Calibre for fuzzy title: ${cleanTitle}`);
+      
+      try {
+        const response = await axios.get(`${CONFIG.calibre.url}/ajax/books`, {
+          params: { 
+            search: `title:"~${cleanTitle}"`,
+            num: 20
+          },
+          auth,
+          timeout: 5000
+        });
+
+        if (response.data && response.data.total_num > 0) {
+          console.log(`✓ Found by fuzzy title: ${response.data.total_num} matches`);
+          return { 
+            inLibrary: true,
+            count: response.data.total_num
+          };
+        }
+      } catch (fuzzyError) {
+        console.log(`Fuzzy title search failed: ${fuzzyError.message}`);
+      }
+    }
+
+    // Last resort - search just the main words from title
+    if (title) {
+      const mainWords = title
+        .replace(/[:\(\)\[\]—–\-""'']/g, ' ')
+        .split(' ')
+        .filter(word => word.length > 3) // Only words longer than 3 chars
+        .slice(0, 3) // Take first 3 significant words
+        .join(' ');
+      
+      if (mainWords) {
+        console.log(`Checking Calibre for main words: ${mainWords}`);
+        
+        try {
+          const response = await axios.get(`${CONFIG.calibre.url}/ajax/books`, {
+            params: { 
+              search: mainWords,
+              num: 20
+            },
+            auth,
+            timeout: 5000
+          });
+
+          if (response.data && response.data.total_num > 0) {
+            console.log(`✓ Found by keywords: ${response.data.total_num} matches`);
+            return { 
+              inLibrary: true,
+              count: response.data.total_num
+            };
+          }
+        } catch (keywordError) {
+          console.log(`Keyword search failed: ${keywordError.message}`);
+        }
       }
     }
 
@@ -371,9 +443,55 @@ async function checkCalibreForBook(title, author, isbn) {
     console.error('Calibre check error:', error.message);
     if (error.response) {
       console.error('  Status:', error.response.status);
-      console.error('  Data:', error.response.data);
+      console.error('  Data:', JSON.stringify(error.response.data).substring(0, 200));
     }
     return { inLibrary: false, error: error.message };
+  }
+}
+
+// List all books in Calibre library (for debugging)
+async function listCalibreLibrary() {
+  if (!CONFIG.calibre.url) {
+    console.log('Calibre not configured, skipping library list');
+    return;
+  }
+
+  try {
+    console.log('\n📚 Fetching Calibre library contents...');
+    
+    const auth = CONFIG.calibre.username && CONFIG.calibre.password 
+      ? { username: CONFIG.calibre.username, password: CONFIG.calibre.password }
+      : undefined;
+
+    const response = await axios.get(`${CONFIG.calibre.url}/ajax/books`, {
+      params: { 
+        num: 100,  // Get up to 100 books
+        sort: 'title'
+      },
+      auth,
+      timeout: 10000
+    });
+
+    if (response.data && response.data.total_num > 0) {
+      console.log(`\n✓ Found ${response.data.total_num} books in Calibre library:\n`);
+      
+      response.data.books.forEach((book, index) => {
+        const authors = book.authors ? book.authors.join(', ') : 'Unknown';
+        const identifiers = book.identifiers ? Object.entries(book.identifiers).map(([type, id]) => `${type}:${id}`).join(', ') : 'none';
+        console.log(`${index + 1}. "${book.title}" by ${authors}`);
+        console.log(`   ID: ${book.id} | Identifiers: ${identifiers}`);
+      });
+      
+      console.log(`\nTotal: ${response.data.total_num} books\n`);
+    } else {
+      console.log('⚠️  Calibre library appears to be empty or not accessible');
+    }
+  } catch (error) {
+    console.error('Failed to list Calibre library:', error.message);
+    if (error.response) {
+      console.error('  Status:', error.response.status);
+      console.error('  URL:', error.config?.url);
+    }
   }
 }
 
@@ -430,22 +548,29 @@ app.post('/api/check-calibre', async (req, res) => {
   try {
     const { books } = req.body;
 
+    console.log('\n=== Calibre Check Request ===');
+    console.log(`Checking ${books?.length || 0} books`);
+    console.log(`Calibre URL configured: ${CONFIG.calibre.url || 'NOT SET'}`);
+
     if (!books || !Array.isArray(books)) {
       return res.status(400).json({ success: false, error: 'Books array required' });
     }
 
     if (!CONFIG.calibre.url) {
+      console.log('Calibre URL not configured, skipping checks');
       return res.json({ success: true, results: {} });
     }
 
     // Check each book in parallel
     const checks = await Promise.all(
       books.map(async (book) => {
+        console.log(`Checking: ${book.title} (ID: ${book.id})`);
         const result = await checkCalibreForBook(
           book.title,
           book.author_names?.[0] || book.author,
           book.isbn_13 || book.isbn_10
         );
+        console.log(`  Result: ${result.inLibrary ? 'IN LIBRARY' : 'not found'}`);
         return { id: book.id, ...result };
       })
     );
@@ -456,6 +581,7 @@ app.post('/api/check-calibre', async (req, res) => {
       results[check.id] = check.inLibrary;
     });
 
+    console.log(`Calibre check complete. Found ${Object.values(results).filter(Boolean).length} books in library`);
     res.json({ success: true, results });
   } catch (error) {
     console.error('Calibre check error:', error.message);
@@ -604,11 +730,20 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n📚 Liberry Server running on http://0.0.0.0:${PORT}`);
   console.log(`\n⚙️  Configuration:`);
   console.log(`   Hardcover: ${CONFIG.hardcover.apiKey ? '✓ API key set' : '✗ API key missing'}`);
-  console.log(`   MAM: ${CONFIG.mam.id ? '✓ Cookie set (trying MAM first)' : '✗ Not configured (Prowlarr only)'}`);
+  console.log(`   MAM: ${CONFIG.mam.id && CONFIG.mam.id !== 'disabled' ? '✓ Cookie set (disabled)' : '✗ Not configured'}`);
   console.log(`   Prowlarr: ${CONFIG.prowlarr.url}`);
   console.log(`   qBitTorrent: ${CONFIG.qbittorrent.url}`);
-  console.log(`   Calibre: ${CONFIG.calibre.ingestFolder}`);
+  console.log(`   Calibre Ingest: ${CONFIG.calibre.ingestFolder}`);
+  console.log(`   Calibre Web: ${CONFIG.calibre.url || '✗ Not configured (library checking disabled)'}`);
+  if (CONFIG.calibre.url) {
+    console.log(`   Calibre Auth: ${CONFIG.calibre.username ? '✓ Username/password set' : '○ No auth (public instance)'}`);
+  }
   console.log(`\n📝 Make sure to set environment variables!`);
   
   loginToQBittorrent();
+  
+  // List Calibre library on startup for debugging
+  if (CONFIG.calibre.url) {
+    setTimeout(() => listCalibreLibrary(), 1000);
+  }
 });
