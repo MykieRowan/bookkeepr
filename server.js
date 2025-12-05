@@ -35,6 +35,93 @@ const CONFIG = {
   }
 };
 
+// qBittorrent session cookie storage
+let qbitCookie = null;
+
+// Login to qBittorrent and get session cookie
+async function loginToQBittorrent() {
+  try {
+    console.log('Logging into qBittorrent...');
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('username', CONFIG.qbittorrent.username);
+    form.append('password', CONFIG.qbittorrent.password);
+
+    const response = await axios.post(
+      `${CONFIG.qbittorrent.url}/api/v2/auth/login`,
+      form,
+      {
+        headers: form.getHeaders(),
+        maxRedirects: 0,
+        validateStatus: (status) => status === 200
+      }
+    );
+
+    // Extract cookie from response
+    const cookies = response.headers['set-cookie'];
+    if (cookies && cookies.length > 0) {
+      qbitCookie = cookies[0].split(';')[0];
+      console.log('✓ qBittorrent login successful');
+      return true;
+    }
+
+    console.log('✓ qBittorrent login successful (no cookie needed)');
+    return true;
+  } catch (error) {
+    console.error('qBittorrent login error:', error.message);
+    return false;
+  }
+}
+
+// Add torrent to qBittorrent by URL
+async function addTorrentToQBittorrent(downloadUrl, title) {
+  try {
+    // Ensure we're logged in
+    if (!qbitCookie) {
+      await loginToQBittorrent();
+    }
+
+    console.log(`Adding torrent to qBittorrent: ${title}`);
+    
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('urls', downloadUrl);
+    form.append('savepath', CONFIG.calibre.ingestFolder);
+
+    const headers = {
+      ...form.getHeaders()
+    };
+    
+    if (qbitCookie) {
+      headers['Cookie'] = qbitCookie;
+    }
+
+    const response = await axios.post(
+      `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
+      form,
+      {
+        headers: headers,
+        timeout: 10000
+      }
+    );
+
+    console.log('✓ Torrent added to qBittorrent');
+    return true;
+  } catch (error) {
+    console.error('qBittorrent add torrent error:', error.message);
+    
+    // If we got a 403, try logging in again
+    if (error.response && error.response.status === 403) {
+      console.log('Session expired, trying to re-login...');
+      qbitCookie = null;
+      await loginToQBittorrent();
+      return addTorrentToQBittorrent(downloadUrl, title); // Retry once
+    }
+    
+    return false;
+  }
+}
+
 // Search MyAnonaMouse directly
 async function searchMAM(title) {
   if (!CONFIG.mam.id) {
@@ -97,6 +184,11 @@ async function downloadFromMAM(mamResult) {
       timeout: 10000
     });
 
+    // Ensure we're logged in to qBittorrent
+    if (!qbitCookie) {
+      await loginToQBittorrent();
+    }
+
     // Send torrent to qBitTorrent
     const FormData = require('form-data');
     const form = new FormData();
@@ -104,22 +196,26 @@ async function downloadFromMAM(mamResult) {
       filename: `${mamResult.id}.torrent`,
       contentType: 'application/x-bittorrent'
     });
+    form.append('savepath', CONFIG.calibre.ingestFolder);
+
+    const headers = {
+      ...form.getHeaders()
+    };
+    
+    if (qbitCookie) {
+      headers['Cookie'] = qbitCookie;
+    }
 
     await axios.post(
       `${CONFIG.qbittorrent.url}/api/v2/torrents/add`,
       form,
       {
-        headers: {
-          ...form.getHeaders()
-        },
-        auth: {
-          username: CONFIG.qbittorrent.username,
-          password: CONFIG.qbittorrent.password
-        },
+        headers: headers,
         timeout: 10000
       }
     );
 
+    console.log('✓ MAM torrent added to qBittorrent');
     return true;
   } catch (error) {
     console.error('MAM download error:', error.message);
@@ -157,33 +253,6 @@ async function searchProwlarr(title, author, isbn) {
       console.error('Response status:', error.response.status);
       console.error('Response data:', error.response.data);
     }
-    throw error;
-  }
-}
-
-// Download from Prowlarr
-async function downloadFromProwlarr(indexerId, guid) {
-  try {
-    console.log(`Grabbing release from indexer ${indexerId}`);
-
-    const response = await axios.post(
-      `${CONFIG.prowlarr.url}/api/v1/search`,
-      {
-        guid: guid,
-        indexerId: indexerId
-      },
-      {
-        headers: {
-          'X-Api-Key': CONFIG.prowlarr.apiKey,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error('Prowlarr download error:', error.message);
     throw error;
   }
 }
@@ -342,12 +411,33 @@ app.post('/api/download', async (req, res) => {
     console.log(`  Seeders: ${bestResult.seeders || '?'}`);
     console.log(`  Indexer: ${bestResult.indexer}`);
 
-    // Grab the release
-    await downloadFromProwlarr(bestResult.indexerId, bestResult.guid);
+    // Extract download URL from the result
+    // Prowlarr search results include either downloadUrl or magnetUrl
+    const downloadUrl = bestResult.downloadUrl || bestResult.magnetUrl;
+    
+    if (!downloadUrl) {
+      console.error('No download URL found in result');
+      return res.json({
+        success: false,
+        error: 'No download link available for this result'
+      });
+    }
+
+    console.log(`Download URL: ${downloadUrl.substring(0, 50)}...`);
+
+    // Add torrent directly to qBittorrent
+    const added = await addTorrentToQBittorrent(downloadUrl, bestResult.title);
+
+    if (!added) {
+      return res.json({
+        success: false,
+        error: 'Failed to add torrent to qBittorrent'
+      });
+    }
 
     res.json({
       success: true,
-      message: 'Download started via Prowlarr',
+      message: 'Download started successfully',
       source: 'prowlarr',
       details: {
         title: bestResult.title,
@@ -394,4 +484,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   qBitTorrent: ${CONFIG.qbittorrent.url}`);
   console.log(`   Calibre: ${CONFIG.calibre.ingestFolder}`);
   console.log(`\n📝 Make sure to set environment variables in docker-compose.yml!`);
+  
+  // Login to qBittorrent on startup
+  loginToQBittorrent();
 });
